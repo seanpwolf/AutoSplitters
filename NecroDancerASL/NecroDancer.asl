@@ -1,11 +1,9 @@
-// TODO: (features) 
-//  - documentation (lol)
+// TODO: 
+//  - add extra documentation, maybe reformat existing documentation
 //  - add a reset flag for losing low% (if setting is checked)
+//  - change vars.splits to use a HashSet over a Dictionary
 //  - option to replace IGT with RTA/noloads (ignores boss splash / menu pause)
 //  - option to replace IGT with beat counter (1 beat = 1 second?)
-//
-// FIXME:
-//  - 
 
 /* 
 Overview of variables used in state descriptors:
@@ -30,7 +28,8 @@ Overview of variables used in state descriptors:
                 10 = Nocturna, 11 = Diamond, 12 = Mary, 13 = Tempo
 
   level:    current level or floor the player is on (e.g. 2 for 3-2). Some 
-            notable values include x-5 for the final story boss level on story              characters (x-5 is the victory flag for non-story characters), x-6 
+            notable values include x-5 for the final story boss level on story  
+            characters (x-5 is the victory flag for non-story characters), x-6 
             for the story char victory flag, and a value of -2 for the lobby.
 
   loading:  flag to indicate the IGT is paused for a multiple of reasons -
@@ -85,7 +84,6 @@ startup {
     settings.Add("misc", true, "Misc. Settings");
     settings.Add("debug", false, "Debug Prints (DebugView)", "misc");
 
-    // TODO: change to using a HashSet instead 
     vars.splits = new Dictionary<string, bool>() {
         {"1-1", false},
         {"1-2", false},
@@ -121,7 +119,7 @@ init {
         version = String.Format("<unknown> (0x{0:X8})", mms);
 
     if (settings["debug"])
-        print(String.Format("[CoND.ASL] v: `{0}' (0x{1:X8})", version, mms));
+        print(String.Format("[CoND.ASL] Version: `{0}' (0x{1:X8})", version, mms));
 
     vars.isLoading = false;
     vars.isStoryChar = false;
@@ -139,7 +137,7 @@ update {
     if (current.charTime < old.charTime && current.time > current.charTime 
             && current.level == 1) {
         if (settings["debug"])
-            print("[CoND.ASL] Resetting auto split flags (new char run)...");
+            print("[CoND.ASL] Clearing auto split flags (new char run)...");
         foreach (string s in new List<string>(vars.splits.Keys))
             vars.splits[s] = false;
     }
@@ -223,7 +221,7 @@ reset {
         vars.quickReset = (current.songTime < old.songTime && !vars.isLoading);
 
     if (settings["debug"] && inLobby) 
-        print("[CoND.ASL] Resetting... (in lobby)");
+        print("[CoND.ASL] Resetting... (returned to lobby)");
     else if (settings["debug"] && timerReset) 
         print("[CoND.ASL] Resetting... (IGT reset)");
     else if (settings["debug"] && vars.quickReset) 
