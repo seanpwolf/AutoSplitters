@@ -1,7 +1,6 @@
 // TODO: documentation
 
-state("DARKSOULS") {
-}
+state("DARKSOULS") {}
 
 state("DARKSOULS", "steam") {
     // Most of the below pointers and offsets are courtesy of DSCM
