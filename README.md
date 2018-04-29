@@ -2,6 +2,7 @@
 
 A collection of auto splitters for LiveSplit (mostly in the form of ASL scripts) that I have made. Games that I currently have made auto splitters for:
 
+* [Crypt of the NecroDancer](/NecroDancerASL)
 * [Dark Souls: Prepare to Die Edition](/DarkSoulsASL)
 
 You can refer to their individual folders for more information and details about how to use their respective auto splitter. 
