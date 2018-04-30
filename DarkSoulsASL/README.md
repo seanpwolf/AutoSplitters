@@ -7,7 +7,7 @@ A LiveSplit auto splitter and IGT plugin for Dark Souls: PTDE (original, not rem
 Probably never, due to a lack of community interest.
 
 ### Manual (via layout component)
-You can manually add the autosplitter by [downloading the script](https://raw.githubusercontent.com/seanpwolf/DarkSoulsASL/master/darksouls.asl), adding a "Scriptable Auto Splitter" to your LiveSplit layout (+ button -> Control -> "Scriptable Auto Splitter", and then selecting the script in the layout settings ("Scriptable Auto Splitter" tab). Your settings will be stored in your layout file.
+You can manually add the auto splitter by [downloading the script](https://raw.githubusercontent.com/seanpwolf/AutoSplitters/master/DarkSoulsASL/DarkSouls.asl), adding a "Scriptable Auto Splitter" to your LiveSplit layout (+ button -> Control -> "Scriptable Auto Splitter", and then selecting the script in the layout settings ("Scriptable Auto Splitter" tab). Your settings will be stored in your layout file.
 
 ## Usage
 
