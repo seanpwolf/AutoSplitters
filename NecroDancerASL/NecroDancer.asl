@@ -17,7 +17,7 @@ Overview of variables used in state descriptors:
             is used in this script to avoid bugs of auto-reset failing for 
             <1 second resets in game (e.g. resetting for immediate shriner).
 
-  time:     the IGT, except it is preserved for each run/character in 
+  igt:      the IGT, except it is preserved for each run/character in 
             multi-char modes or deathless. Otherwise, behaves mostly 
             identically to `charTime'.
 
@@ -48,7 +48,7 @@ state("NecroDancer") {}
 state("NecroDancer", "1.29") { // Current patch of classic/predlc (Steam)
     int charTime : 0x3BF6C8;
     int songTime : 0x3BF61C;
-    int time : 0x3BF6D0;   
+    int igt : 0x3BF6D0;   
     sbyte charID : 0x3BA354, 0x14, 0x100; 
     sbyte zone : 0x3BF988;                
     sbyte level : 0x3BF98C;
@@ -61,7 +61,7 @@ state("NecroDancer", "1.29") { // Current patch of classic/predlc (Steam)
 state("NecroDancer", "2.59") { // Current patch of amplified (Steam)
     int charTime : 0x43593C;
     int songTime : 0x435808;
-    int time : 0x435944;
+    int igt : 0x435944;
     sbyte charID : 0x435770, 8, 4, 0x11c;
     sbyte level : 0x435C10;
     sbyte loading : 0x435942;
@@ -80,7 +80,6 @@ startup {
     settings.Add("levelSplits", false, "Split On Level Change", "zoneSplits");
     settings.Add("experimental", false, "Experimental Options", "splits");
     settings.Add("deathless", true, "Deathless Mode Fix", "experimental");
-
     settings.Add("misc", true, "Misc. Settings");
     settings.Add("debug", false, "Debug Prints (DebugView)", "misc");
 
@@ -134,7 +133,7 @@ update {
     vars.isStoryChar = (current.charID <= 2 || current.charID == 10);
     vars.lastZone = current.charID == 2 ? 1 : (version.Equals("2.59") ? 5 : 4);
 
-    if (current.charTime < old.charTime && current.time > current.charTime 
+    if (current.charTime < old.charTime && current.igt > current.charTime 
             && current.level == 1) {
         if (settings["debug"])
             print("[CoND.ASL] Clearing auto split flags (new char run)...");
@@ -144,7 +143,7 @@ update {
 }
 
 start {
-    if ((current.time < old.time || vars.quickReset) && current.level == 1) {
+    if ((current.igt < old.igt || vars.quickReset) && current.level == 1) {
         vars.quickReset = false;
         if (settings["debug"])
             print("[CoND.ASL] Starting run (clearing auto split flags)...");
@@ -155,21 +154,23 @@ start {
 }
 
 split {
-    bool b = false;
+    bool shouldSplit = false;
     string lastZone = "zone" + vars.lastZone;
 
-    // Run End Split
+    // Run Completion Split
     if (current.zone == vars.lastZone && current.level >= 4 
           && current.level != old.level) {
         if (!vars.splits["storyBoss"] || !vars.splits[lastZone]) {
             if (vars.isStoryChar) 
-                b = (current.level == 6 && old.level == 5);
+                shouldSplit = (current.level == 6 && old.level == 5);
             else if (current.charID == 6) // Dove
-                b = (current.level == 5 && old.level == 3);
+                shouldSplit = (current.level == 5 && old.level == 3);
             else
-                b = (current.level == 5 && old.level == 4);
+                shouldSplit = (current.level == 5 && old.level == 4);
 
-            if (b) { // Workaround for DR/FSW split conditions
+            // Explicitly keeping the if here is an intentional workaround
+            // to split on DR/FSW if "Level Change" splits are enabled
+            if (shouldSplit) { 
                 if (settings["debug"])
                     print("[CoND.ASL] `Finished Run' auto split condition met");
                 vars.splits["storyBoss"] = vars.isStoryChar;
@@ -179,22 +180,22 @@ split {
         }
     }
 
-    // Zone Splits
+    // Zone/Depth Change Splits
     if (Math.Abs(current.zone - old.zone) == 1 && old.level >= 3 
           && current.level == 1 && !vars.splits["zone"+old.zone]) {
         if (current.charID == 2) // Aria
-            b = current.zone < old.zone && old.level == 4;
+            shouldSplit = current.zone < old.zone && old.level == 4;
         else if (current.charID == 6) // Dove
-            b = current.zone > old.zone && old.level == 3;
+            shouldSplit = current.zone > old.zone && old.level == 3;
         else
-            b = current.zone > old.zone && old.level == 4;
-        if (settings["debug"] && b)
+            shouldSplit = current.zone > old.zone && old.level == 4;
+        if (settings["debug"] && shouldSplit)
             print("[CoND.ASL] `Zone Change' auto split condition met");
-        vars.splits["zone"+old.zone] = b;
-        return b && settings["zoneSplits"];
+        vars.splits["zone"+old.zone] = shouldSplit;
+        return shouldSplit && settings["zoneSplits"];
     }
 
-    // Level/Floor Splits
+    // Level/Floor Change Splits
     if (current.zone == old.zone && current.level > old.level) {
         if (settings["debug"])
             print("[CoND.ASL] `Level Change' auto split condition met");
@@ -203,7 +204,7 @@ split {
     }
 
     // Deathless workaround
-    if (current.charTime < old.charTime && current.time > current.charTime 
+    if (current.charTime < old.charTime && current.igt > current.charTime 
             && current.level == 1) {
         if (settings["debug"])
             print("[CoND.ASL] Deathless mode workaround triggered");
@@ -213,11 +214,11 @@ split {
 
 reset {
     bool inLobby = (current.zone == 1 && current.level == -2);
-    bool timerReset = (current.time < old.time && current.level == 1);
+    bool timerReset = (current.igt < old.igt && current.level == 1);
 
     // Workaround if the player quick resets at the start in rapid succession
     // (doesn't appear to be perfect, but catches majority of <1 sec resets)
-    if (current.time == old.time && current.time == 0 && current.level == 1) 
+    if (current.igt == old.igt && current.igt == 0 && current.level == 1) 
         vars.quickReset = (current.songTime < old.songTime && !vars.isLoading);
 
     if (settings["debug"] && inLobby) 
@@ -237,8 +238,8 @@ isLoading {
 gameTime {
     // The IGT in memory only updates once every ~31 frames, so only sync the
     // game time when the game "is loading" or when the IGT changes
-    if (vars.isLoading || current.time != old.time)
-        return TimeSpan.FromMilliseconds(current.time);
+    if (vars.isLoading || current.igt != old.igt)
+        return TimeSpan.FromMilliseconds(current.igt);
 }
 
 // vim: set ts=4 sw=4 autoindent syntax=cs :
