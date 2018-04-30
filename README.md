@@ -5,6 +5,6 @@ A collection of auto splitters for LiveSplit (mostly in the form of ASL scripts)
 * [Crypt of the NecroDancer](/NecroDancerASL)
 * [Dark Souls: Prepare to Die Edition](/DarkSoulsASL)
 
-You can refer to their individual folders for more information and details about how to use their respective auto splitter. 
+You can refer to each game's individual folder for more information and details about how to use their respective auto splitter. 
 
-For technical information on how LiveSplit auto splitters work, [see here](https://github.com/LiveSplit/LiveSplit/blob/master/Documentation/Auto-Splitters.md).
+For technical information on how LiveSplit ASL scripts work, [see here](https://github.com/LiveSplit/LiveSplit/blob/master/Documentation/Auto-Splitters.md).
