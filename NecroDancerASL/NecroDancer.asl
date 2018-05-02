@@ -47,28 +47,29 @@ state("NecroDancer") {}
 
 state("NecroDancer", "1.29") { // Current patch of classic/predlc (Steam)
     int charTime : 0x3BF6C8;
-    int songTime : 0x3BF61C;
     int igt : 0x3BF6D0;   
+    //int seed : 0x3????;
     sbyte charID : 0x3BA354, 0x14, 0x100; 
     sbyte zone : 0x3BF988;                
     sbyte level : 0x3BF98C;
     sbyte loading : 0x3BF6CE;
-    //sbyte bossIntro : 0x3BF???; 
+    //int songTime : 0x3BF61C;
     //sbyte beatCounter : 0x3BF???; 
+    //sbyte bossIntro : 0x3BF???; 
     //sbyte gamePaused : 0x3BF6C7; 
 }
 
 state("NecroDancer", "2.59") { // Current patch of amplified (Steam)
     int charTime : 0x43593C;
-    //int songTime : 0x435808;
     int igt : 0x435944;
     int seed : 0x435AF4;
     sbyte charID : 0x435770, 8, 4, 0x11c;
     sbyte level : 0x435C10;
     sbyte loading : 0x435942;
     sbyte zone : 0x435C0C; 
-    //sbyte bossIntro : 0x43557C; 
+    //int songTime : 0x435808;
     //sbyte beatCounter : 0x4359B4;
+    //sbyte bossIntro : 0x43557C; 
     //sbyte gamePaused : 0x43596C; 
 }
 
@@ -84,6 +85,13 @@ startup {
     settings.Add("quickReset", true, "Quick Reset Workaround", "experimental");
     settings.Add("misc", true, "Misc. Settings");
     settings.Add("debug", false, "Debug Prints (DebugView)", "misc");
+
+    settings.SetToolTip("endSplit", "Splits on a finished run for an individual character.");
+    settings.SetToolTip("zoneSplits", "Splits after changing zones - e.g. would split on transition from 2-4 to 3-1.");
+    settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g from 1-2 to 1-3). This will also split for Dead Ringer or Frakensteinway if playing as Cadence or Nocturna respectively.");
+    settings.SetToolTip("experimental", "Some fixes/options that have been minimally tested.");
+    settings.SetToolTip("deathless", "Fix to split at the end of deathless runs - unsure if it has any adverse effects on rest of auto split logic.");
+    settings.SetToolTip("quickReset", "Workaround to allow auto-reset to work for <1 second quick resets - might double reset (skewing attempt counter).");
 
     vars.splits = new Dictionary<string, bool>() {
         {"1-1", false},
@@ -109,7 +117,7 @@ startup {
         {"storyBoss", false}
     };
 
-    print("[CoND.ASL] script started up");
+    print("[CoND.ASL] startup finished");
 }
 
 init {
@@ -128,7 +136,7 @@ init {
     vars.isStoryChar = false;
     vars.lastZone = 0;
     vars.quickReset = false; 
-    //vars.justReset = false;
+    vars.justReset = false;
 }
 
 update {
