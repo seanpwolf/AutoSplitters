@@ -60,8 +60,9 @@ state("NecroDancer", "1.29") { // Current patch of classic/predlc (Steam)
 
 state("NecroDancer", "2.59") { // Current patch of amplified (Steam)
     int charTime : 0x43593C;
-    int songTime : 0x435808;
+    //int songTime : 0x435808;
     int igt : 0x435944;
+    int seed : 0x435AF4;
     sbyte charID : 0x435770, 8, 4, 0x11c;
     sbyte level : 0x435C10;
     sbyte loading : 0x435942;
@@ -75,11 +76,12 @@ startup {
     refreshRate = 60; 
 
     settings.Add("splits", true, "Auto Split Settings");
-    settings.Add("endSplit", true, "Split On Run Completion", "splits");
+    settings.Add("endSplit", true, "Split On Run Finish", "splits");
     settings.Add("zoneSplits", true, "Split On Zone Change", "endSplit");
     settings.Add("levelSplits", false, "Split On Level Change", "zoneSplits");
-    settings.Add("experimental", false, "Experimental Options", "splits");
+    settings.Add("experimental", false, "Experimental Fixes/Options");
     settings.Add("deathless", true, "Deathless Mode Fix", "experimental");
+    settings.Add("quickReset", true, "Quick Reset Workaround", "experimental");
     settings.Add("misc", true, "Misc. Settings");
     settings.Add("debug", false, "Debug Prints (DebugView)", "misc");
 
@@ -106,6 +108,8 @@ startup {
         {"zone5", false},
         {"storyBoss", false}
     };
+
+    print("[CoND.ASL] script started up");
 }
 
 init {
@@ -124,10 +128,12 @@ init {
     vars.isStoryChar = false;
     vars.lastZone = 0;
     vars.quickReset = false; 
+    //vars.justReset = false;
 }
 
 update {
     if (version.Contains("<unknown>")) return false; 
+    if (!version.Equals("2.59")) return false; // FIXME - temporary
 
     vars.isLoading = (current.loading == 0);
     vars.isStoryChar = (current.charID <= 2 || current.charID == 10);
@@ -136,17 +142,17 @@ update {
     if (current.charTime < old.charTime && current.igt > current.charTime 
             && current.level == 1) {
         if (settings["debug"])
-            print("[CoND.ASL] Clearing auto split flags (new char run)...");
+            print("[CoND.ASL] update: clearing auto split flags (new char run)");
         foreach (string s in new List<string>(vars.splits.Keys))
             vars.splits[s] = false;
     }
 }
 
 start {
-    if ((current.igt < old.igt || vars.quickReset) && current.level == 1) {
+    if (vars.quickReset || current.igt < old.igt) {
         vars.quickReset = false;
         if (settings["debug"])
-            print("[CoND.ASL] Starting run (clearing auto split flags)...");
+            print("[CoND.ASL] start: clear auto split flags)");
         foreach (string s in new List<string>(vars.splits.Keys))
             vars.splits[s] = false;
         return true;
@@ -156,6 +162,10 @@ start {
 split {
     bool shouldSplit = false;
     string lastZone = "zone" + vars.lastZone;
+
+    // Debug helpers
+    string oldZL = old.charID + ": " + old.zone + "-" + old.level;
+    string curZL = current.charID + ": " + current.zone + "-" + current.level;
 
     // Run Completion Split
     if (current.zone == vars.lastZone && current.level >= 4 
@@ -172,7 +182,7 @@ split {
             // to split on DR/FSW if "Level Change" splits are enabled
             if (shouldSplit) { 
                 if (settings["debug"])
-                    print("[CoND.ASL] `Finished Run' auto split condition met");
+                    print(String.Format("[CoND.ASL] split: {0} to {1} (`run finish')", oldZL, curZL));
                 vars.splits["storyBoss"] = vars.isStoryChar;
                 vars.splits[lastZone] = true;
                 return settings["endSplit"];
@@ -190,15 +200,16 @@ split {
         else
             shouldSplit = current.zone > old.zone && old.level == 4;
         if (settings["debug"] && shouldSplit)
-            print("[CoND.ASL] `Zone Change' auto split condition met");
+            print(String.Format("[CoND.ASL] split: {0} to {1} (`zone change')", oldZL, curZL));
         vars.splits["zone"+old.zone] = shouldSplit;
         return shouldSplit && settings["zoneSplits"];
     }
 
     // Level/Floor Change Splits
-    if (current.zone == old.zone && current.level > old.level) {
+    if (current.zone == old.zone && current.level > old.level 
+          && old.level > 0) {
         if (settings["debug"])
-            print("[CoND.ASL] `Level Change' auto split condition met");
+            print(String.Format("[CoND.ASL] split: {0} to {1} (`level change')", oldZL, curZL));
         vars.splits[old.zone+"-"+old.level] = true;
         return settings["levelSplits"];
     }
@@ -207,28 +218,42 @@ split {
     if (current.charTime < old.charTime && current.igt > current.charTime 
             && current.level == 1) {
         if (settings["debug"])
-            print("[CoND.ASL] Deathless mode workaround triggered");
+            print("[CoND.ASL] split: deathless mode workaround triggered");
         return settings["deathless"];
     }
 }
 
 reset {
-    bool inLobby = (current.zone == 1 && current.level == -2);
-    bool timerReset = (current.igt < old.igt && current.level == 1);
+    if (vars.justReset) {
+        vars.justReset = false;
+        return false;
+    }
+
+    bool igtReset = (current.igt < old.igt);
+    bool returnedToLobby = (current.zone == 1 && current.level == -2);
+    bool seedChange = false;
+    string s = "[CoND.ASL] reset:";
 
     // Workaround if the player quick resets at the start in rapid succession
     // (doesn't appear to be perfect, but catches majority of <1 sec resets)
-    if (current.igt == old.igt && current.igt == 0 && current.level == 1) 
-        vars.quickReset = (current.songTime < old.songTime && !vars.isLoading);
+    if (settings["quickReset"] && current.igt == old.igt && old.igt == 0 && current.level == 1) {
+        seedChange = (current.seed > old.seed);
+        vars.quickReset = seedChange;
+    }
 
-    if (settings["debug"] && inLobby) 
-        print("[CoND.ASL] Resetting... (returned to lobby)");
-    else if (settings["debug"] && timerReset) 
-        print("[CoND.ASL] Resetting... (IGT reset)");
-    else if (settings["debug"] && vars.quickReset) 
-        print("[CoND.ASL] Resetting... (song time reset)");
+    if (settings["debug"]) {
+        if (returnedToLobby) 
+            print(String.Format("{0} `returned to lobby'", s));
+        else if (igtReset) 
+            print(String.Format("{0} `IGT reset' ({1} --> {2})", s, old.igt, current.igt));
+        else if (seedChange)
+            print(String.Format("{0} `seed change' ({1} --> {2})", s, old.seed, current.seed));
+    }
 
-    return inLobby || timerReset || vars.quickReset;
+    if (returnedToLobby || igtReset || seedChange) {
+        vars.justReset = true;
+        return true;
+    }
 }
 
 isLoading {
