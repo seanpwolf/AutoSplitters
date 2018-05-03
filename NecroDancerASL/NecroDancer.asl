@@ -64,6 +64,7 @@ state("NecroDancer", "2.59") { // Current patch of amplified (Steam)
     int igt : 0x435944;
     int seed : 0x435AF4;
     sbyte charID : 0x435770, 8, 4, 0x11c;
+    sbyte deathless : 0x435BBD;
     sbyte level : 0x435C10;
     sbyte loading : 0x435942;
     sbyte zone : 0x435C0C; 
@@ -82,7 +83,6 @@ startup {
     settings.Add("levelSplits", false, "Split On Level Change", "zoneSplits");
     settings.Add("experimental", false, "Experimental Fixes/Options");
     settings.Add("deathless", true, "Deathless Mode Fix", "experimental");
-    settings.Add("quickReset", true, "Quick Reset Workaround", "experimental");
     settings.Add("misc", true, "Misc. Settings");
     settings.Add("debug", false, "Debug Prints (DebugView)", "misc");
 
@@ -91,7 +91,6 @@ startup {
     settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g from 1-2 to 1-3). This will also split for Dead Ringer or Frakensteinway if playing as Cadence or Nocturna respectively.");
     settings.SetToolTip("experimental", "Some fixes/options that have been minimally tested.");
     settings.SetToolTip("deathless", "Fix to split at the end of deathless runs - unsure if it has any adverse effects on rest of auto split logic.");
-    settings.SetToolTip("quickReset", "Workaround to allow auto-reset to work for <1 second quick resets - might double reset (skewing attempt counter).");
 
     vars.splits = new Dictionary<string, bool>() {
         {"1-1", false},
@@ -126,17 +125,17 @@ init {
         version = "1.29";
 	else if (mms == 0x561000)
         version = "2.59";
-    else // Could not find version or version not supported
+    else 
         version = String.Format("<unknown> (0x{0:X8})", mms);
 
     if (settings["debug"])
-        print(String.Format("[CoND.ASL] Version: `{0}' (0x{1:X8})", version, mms));
+        print(String.Format("[CoND.ASL] Version: `{0}'", version));
 
     vars.isLoading = false;
     vars.isStoryChar = false;
     vars.lastZone = 0;
     vars.quickReset = false; 
-    vars.justReset = false;
+    vars.runCounter = 0;
 }
 
 update {
@@ -147,8 +146,7 @@ update {
     vars.isStoryChar = (current.charID <= 2 || current.charID == 10);
     vars.lastZone = current.charID == 2 ? 1 : (version.Equals("2.59") ? 5 : 4);
 
-    if (current.charTime < old.charTime && current.igt > current.charTime 
-            && current.level == 1) {
+    if (current.charTime < old.charTime && current.igt > current.charTime && current.level == 1) {
         if (settings["debug"])
             print("[CoND.ASL] update: clearing auto split flags (new char run)");
         foreach (string s in new List<string>(vars.splits.Keys))
@@ -176,8 +174,7 @@ split {
     string curZL = current.charID + ": " + current.zone + "-" + current.level;
 
     // Run Completion Split
-    if (current.zone == vars.lastZone && current.level >= 4 
-          && current.level != old.level) {
+    if (current.zone == vars.lastZone && current.level >= 4 && current.level != old.level) {
         if (!vars.splits["storyBoss"] || !vars.splits[lastZone]) {
             if (vars.isStoryChar) 
                 shouldSplit = (current.level == 6 && old.level == 5);
@@ -186,8 +183,6 @@ split {
             else
                 shouldSplit = (current.level == 5 && old.level == 4);
 
-            // Explicitly keeping the if here is an intentional workaround
-            // to split on DR/FSW if "Level Change" splits are enabled
             if (shouldSplit) { 
                 if (settings["debug"])
                     print(String.Format("[CoND.ASL] split: {0} to {1} (`run finish')", oldZL, curZL));
@@ -199,8 +194,7 @@ split {
     }
 
     // Zone/Depth Change Splits
-    if (Math.Abs(current.zone - old.zone) == 1 && old.level >= 3 
-          && current.level == 1 && !vars.splits["zone"+old.zone]) {
+    if (Math.Abs(current.zone - old.zone) == 1 && old.level >= 3 && current.level == 1 && !vars.splits["zone"+old.zone]) {
         if (current.charID == 2) // Aria
             shouldSplit = current.zone < old.zone && old.level == 4;
         else if (current.charID == 6) // Dove
@@ -214,54 +208,43 @@ split {
     }
 
     // Level/Floor Change Splits
-    if (current.zone == old.zone && current.level > old.level 
-          && old.level > 0) {
+    if (current.zone == old.zone && current.level > old.level && old.level > 0) {
         if (settings["debug"])
             print(String.Format("[CoND.ASL] split: {0} to {1} (`level change')", oldZL, curZL));
         vars.splits[old.zone+"-"+old.level] = true;
         return settings["levelSplits"];
     }
 
-    // Deathless workaround
-    if (current.charTime < old.charTime && current.igt > current.charTime 
-            && current.level == 1) {
+    // Deathless Mode Workaround (Run Finish)
+    if (current.deathless == 1 && current.charTime < old.charTime && current.igt > current.charTime) {
         if (settings["debug"])
-            print("[CoND.ASL] split: deathless mode workaround triggered");
-        return settings["deathless"];
+            print("[CoND.ASL] split: deathless win");
+        return settings["deathless"] && settings["endSplit"];
     }
 }
 
 reset {
-    if (vars.justReset) {
-        vars.justReset = false;
-        return false;
-    }
-
     bool igtReset = (current.igt < old.igt);
     bool returnedToLobby = (current.zone == 1 && current.level == -2);
-    bool seedChange = false;
-    string s = "[CoND.ASL] reset:";
+    bool seedChanged = false;
 
-    // Workaround if the player quick resets at the start in rapid succession
-    // (doesn't appear to be perfect, but catches majority of <1 sec resets)
-    if (settings["quickReset"] && current.igt == old.igt && old.igt == 0 && current.level == 1) {
-        seedChange = (current.seed > old.seed);
-        vars.quickReset = seedChange;
+    // Workaround if the player quick resets at the start in rapid succession,
+    // as the IGT takes ~1 second to sync in memory at the start of a run
+    if (current.igt == old.igt && old.igt == 0) {
+        seedChanged = (current.seed > old.seed);
+        vars.quickReset = seedChanged;
     }
 
     if (settings["debug"]) {
         if (returnedToLobby) 
-            print(String.Format("{0} `returned to lobby'", s));
+            print("[CoND.ASL] reset: `returned to lobby'");
         else if (igtReset) 
-            print(String.Format("{0} `IGT reset' ({1} --> {2})", s, old.igt, current.igt));
-        else if (seedChange)
-            print(String.Format("{0} `seed change' ({1} --> {2})", s, old.seed, current.seed));
+            print("[CoND.ASL] reset: `IGT reset'");
+        else if (seedChanged)
+            print("[CoND.ASL] reset: `seed change'");
     }
 
-    if (returnedToLobby || igtReset || seedChange) {
-        vars.justReset = true;
-        return true;
-    }
+    return (returnedToLobby || igtReset || seedChanged);
 }
 
 isLoading {
@@ -269,8 +252,8 @@ isLoading {
 }
 
 gameTime {
-    // The IGT in memory only updates once every ~31 frames, so only sync the
-    // game time when the game "is loading" or when the IGT changes
+    // The IGT in memory only updates once every ~0.5 seconds normally, so only
+    // syntc the game time when the game "is loading" or when the IGT changes
     if (vars.isLoading || current.igt != old.igt)
         return TimeSpan.FromMilliseconds(current.igt);
 }
