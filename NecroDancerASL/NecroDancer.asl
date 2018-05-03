@@ -1,7 +1,6 @@
 // TODO: 
 //  - add extra documentation, maybe reformat existing documentation
 //  - add a reset flag for losing low% (if setting is checked)
-//  - change vars.splits to use a HashSet over a Dictionary
 //  - option to replace IGT with RTA/noloads (ignores boss splash / menu pause)
 //  - option to replace IGT with beat counter (1 beat = 1 second?)
 
@@ -92,30 +91,6 @@ startup {
     settings.SetToolTip("experimental", "Some fixes/options that have been minimally tested.");
     settings.SetToolTip("deathless", "Fix to split at the end of deathless runs - unsure if it has any adverse effects on rest of auto split logic.");
 
-    vars.splits = new Dictionary<string, bool>() {
-        {"1-1", false},
-        {"1-2", false},
-        {"1-3", false},
-        {"zone1", false},
-        {"2-1", false},
-        {"2-2", false},
-        {"2-3", false},
-        {"zone2", false},
-        {"3-1", false},
-        {"3-2", false},
-        {"3-3", false},
-        {"zone3", false},
-        {"4-1", false},
-        {"4-2", false},
-        {"4-3", false},
-        {"zone4", false},
-        {"5-1", false},
-        {"5-2", false},
-        {"5-3", false},
-        {"zone5", false},
-        {"storyBoss", false}
-    };
-
     print("[CoND.ASL] startup finished");
 }
 
@@ -136,6 +111,7 @@ init {
     vars.lastZone = 0;
     vars.quickReset = false; 
     vars.runCounter = 0;
+    vars.splits = new HashSet<string>();
 }
 
 update {
@@ -146,79 +122,74 @@ update {
     vars.isStoryChar = (current.charID <= 2 || current.charID == 10);
     vars.lastZone = current.charID == 2 ? 1 : (version.Equals("2.59") ? 5 : 4);
 
-    if (current.charTime < old.charTime && current.igt > current.charTime && current.level == 1) {
-        if (settings["debug"])
-            print("[CoND.ASL] update: clearing auto split flags (new char run)");
-        foreach (string s in new List<string>(vars.splits.Keys))
-            vars.splits[s] = false;
-    }
+    if (current.charTime < old.charTime && current.igt > current.charTime && current.level == 1) 
+        vars.runCounter++;
 }
 
 start {
     if (vars.quickReset || current.igt < old.igt) {
-        vars.quickReset = false;
         if (settings["debug"])
             print("[CoND.ASL] start: clear auto split flags)");
-        foreach (string s in new List<string>(vars.splits.Keys))
-            vars.splits[s] = false;
+        vars.quickReset = false;
+        vars.runCounter = 0;
+        vars.splits.Clear();
         return true;
     }
 }
 
 split {
     bool shouldSplit = false;
-    string lastZone = "zone" + vars.lastZone;
+    string splitFlag = String.Format("R{0}_C{1}:Z{2}-L{3}", vars.runCounter, old.charID, old.zone, old.level);
 
-    // Debug helpers
-    string oldZL = old.charID + ": " + old.zone + "-" + old.level;
-    string curZL = current.charID + ": " + current.zone + "-" + current.level;
+    if (vars.splits.Contains(splitFlag))
+        return false;
 
-    // Run Completion Split
+    // Run Finish Split
     if (current.zone == vars.lastZone && current.level >= 4 && current.level != old.level) {
-        if (!vars.splits["storyBoss"] || !vars.splits[lastZone]) {
-            if (vars.isStoryChar) 
-                shouldSplit = (current.level == 6 && old.level == 5);
-            else if (current.charID == 6) // Dove
-                shouldSplit = (current.level == 5 && old.level == 3);
-            else
-                shouldSplit = (current.level == 5 && old.level == 4);
+        if (vars.isStoryChar) 
+            shouldSplit = (current.level == 6 && old.level == 5);
+        else if (current.charID == 6) // Dove
+            shouldSplit = (current.level == 5 && old.level == 3);
+        else
+            shouldSplit = (current.level == 5 && old.level == 4);
 
-            if (shouldSplit) { 
-                if (settings["debug"])
-                    print(String.Format("[CoND.ASL] split: {0} to {1} (`run finish')", oldZL, curZL));
-                vars.splits["storyBoss"] = vars.isStoryChar;
-                vars.splits[lastZone] = true;
-                return settings["endSplit"];
-            }
+        if (shouldSplit) { 
+            if (settings["debug"])
+                print(String.Format("[CoND.ASL] split: {0} (`run finish')", splitFlag));
+            vars.splits.Add(splitFlag);
+            return settings["endSplit"];
         }
     }
 
     // Zone/Depth Change Splits
-    if (Math.Abs(current.zone - old.zone) == 1 && old.level >= 3 && current.level == 1 && !vars.splits["zone"+old.zone]) {
+    if (Math.Abs(current.zone - old.zone) == 1 && old.level >= 3 && current.level == 1) {
         if (current.charID == 2) // Aria
             shouldSplit = current.zone < old.zone && old.level == 4;
         else if (current.charID == 6) // Dove
             shouldSplit = current.zone > old.zone && old.level == 3;
         else
             shouldSplit = current.zone > old.zone && old.level == 4;
-        if (settings["debug"] && shouldSplit)
-            print(String.Format("[CoND.ASL] split: {0} to {1} (`zone change')", oldZL, curZL));
-        vars.splits["zone"+old.zone] = shouldSplit;
-        return shouldSplit && settings["zoneSplits"];
+
+        if (shouldSplit) {
+            if (settings["debug"])
+                print(String.Format("[CoND.ASL] split: {0} (`zone change')", splitFlag));
+            vars.splits.Add(splitFlag);
+            return settings["zoneSplits"];
+        }
     }
 
     // Level/Floor Change Splits
     if (current.zone == old.zone && current.level > old.level && old.level > 0) {
         if (settings["debug"])
-            print(String.Format("[CoND.ASL] split: {0} to {1} (`level change')", oldZL, curZL));
-        vars.splits[old.zone+"-"+old.level] = true;
+            print(String.Format("[CoND.ASL] split: {0} (`level change')", splitFlag));
+        vars.splits.Add(splitFlag);
         return settings["levelSplits"];
     }
 
     // Deathless Mode Workaround (Run Finish)
     if (current.deathless == 1 && current.charTime < old.charTime && current.igt > current.charTime) {
         if (settings["debug"])
-            print("[CoND.ASL] split: deathless win");
+            print(String.Format("[CoND.ASL] split: {0} (`deathless win')", splitFlag));
         return settings["deathless"] && settings["endSplit"];
     }
 }
