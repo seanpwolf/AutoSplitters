@@ -68,9 +68,9 @@ state("NecroDancer", "2.59") { // Current patch of amplified (Steam)
     sbyte loading : 0x435942;
     sbyte zone : 0x435C0C; 
     //int songTime : 0x435808;
-    //sbyte beatCounter : 0x4359B4;
-    //sbyte bossIntro : 0x43557C; 
-    //sbyte gamePaused : 0x43596C; 
+    sbyte beatCounter : 0x4359B4;
+    sbyte bossIntro : 0x43557C; 
+    sbyte gamePaused : 0x43596C; 
 }
 
 startup {
@@ -80,16 +80,21 @@ startup {
     settings.Add("endSplit", true, "Split On Run Finish", "splits");
     settings.Add("zoneSplits", true, "Split On Zone Change", "endSplit");
     settings.Add("levelSplits", false, "Split On Level Change", "zoneSplits");
-    settings.Add("experimental", false, "Experimental Fixes/Options");
-    settings.Add("deathless", true, "Deathless Mode Fix", "experimental");
+    //settings.Add("experimental", false, "Experimental Fixes/Options");
+    settings.Add("autoreset", true, "Auto Reset Settings");
+    settings.Add("lobbyReset", true, "Reset On Returning To Lobby", "autoreset");
+    settings.Add("igtReset", true, "Reset When IGT Resets", "autoreset");
+    settings.Add("lostLowReset", false, "Reset When Losing Low%", "autoreset");
+    settings.Add("seedReset", true, "Reset When Seed Changes", "autoreset");
     settings.Add("misc", true, "Misc. Settings");
-    settings.Add("debug", false, "Debug Prints (DebugView)", "misc");
+    settings.Add("beatCounter", false, "Use `Beat Counter' for Game Time", "misc");
+    settings.Add("rtaNoLoads", false, "Use `RTA No Loads' for Game Time", "misc");
+    settings.Add("debug", false, "Debug Prints (DebugView)");
 
     settings.SetToolTip("endSplit", "Splits on a finished run for an individual character.");
     settings.SetToolTip("zoneSplits", "Splits after changing zones - e.g. would split on transition from 2-4 to 3-1.");
     settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g from 1-2 to 1-3). This will also split for Dead Ringer or Frakensteinway if playing as Cadence or Nocturna respectively.");
-    settings.SetToolTip("experimental", "Some fixes/options that have been minimally tested.");
-    settings.SetToolTip("deathless", "Fix to split at the end of deathless runs - unsure if it has any adverse effects on rest of auto split logic.");
+    //settings.SetToolTip("experimental", "Some fixes/options that have been minimally tested.");
 
     print("[CoND.ASL] startup finished");
 }
@@ -106,6 +111,7 @@ init {
     if (settings["debug"])
         print(String.Format("[CoND.ASL] Version: `{0}'", version));
 
+    vars.beats = 0;
     vars.isLoading = false;
     vars.isStoryChar = false;
     vars.lastZone = 0;
@@ -122,6 +128,9 @@ update {
     vars.isStoryChar = (current.charID <= 2 || current.charID == 10);
     vars.lastZone = current.charID == 2 ? 1 : (version.Equals("2.59") ? 5 : 4);
 
+    if (current.beatCounter - old.beatCounter == 1)
+        vars.beats++;
+
     if (current.charTime < old.charTime && current.igt > current.charTime && current.level == 1) 
         vars.runCounter++;
 }
@@ -129,7 +138,8 @@ update {
 start {
     if (vars.quickReset || current.igt < old.igt) {
         if (settings["debug"])
-            print("[CoND.ASL] start: clear auto split flags)");
+            print("[CoND.ASL] start: new run)");
+        vars.beats = 0;
         vars.quickReset = false;
         vars.runCounter = 0;
         vars.splits.Clear();
@@ -161,6 +171,13 @@ split {
         }
     }
 
+    // Deathless Mode Workaround (Run Finish)
+    if (current.deathless == 1 && current.charTime < old.charTime && current.igt > current.charTime) {
+        if (settings["debug"])
+            print(String.Format("[CoND.ASL] split: {0} (`deathless win')", splitFlag));
+        return settings["endSplit"];
+    }
+
     // Zone/Depth Change Splits
     if (Math.Abs(current.zone - old.zone) == 1 && old.level >= 3 && current.level == 1) {
         if (current.charID == 2) // Aria
@@ -185,17 +202,11 @@ split {
         vars.splits.Add(splitFlag);
         return settings["levelSplits"];
     }
-
-    // Deathless Mode Workaround (Run Finish)
-    if (current.deathless == 1 && current.charTime < old.charTime && current.igt > current.charTime) {
-        if (settings["debug"])
-            print(String.Format("[CoND.ASL] split: {0} (`deathless win')", splitFlag));
-        return settings["deathless"] && settings["endSplit"];
-    }
 }
 
 reset {
     bool igtReset = (current.igt < old.igt);
+    bool lostLow = false;
     bool returnedToLobby = (current.zone == 1 && current.level == -2);
     bool seedChanged = false;
 
@@ -215,17 +226,30 @@ reset {
             print("[CoND.ASL] reset: `seed change'");
     }
 
-    return (returnedToLobby || igtReset || seedChanged);
+    returnedToLobby = settings["lobbyReset"] && returnedToLobby;
+    igtReset = settings["igtReset"] && igtReset;
+    seedChanged = settings["seedReset"] && seedChanged;
+    lostLow = settings["lostLowReset"] && lostLow;
+
+    return (returnedToLobby || igtReset || seedChanged || lostLow);
 }
 
 isLoading {
-    return vars.isLoading;
+    if (settings["beatCounter"])
+        return true;
+    else if (settings["rtaNoLoads"])
+        return (vars.isLoading && !(current.bossIntro != 0 || current.gamePaused != 0));
+    else
+        return vars.isLoading;
 }
 
 gameTime {
+    if (settings["beatCounter"])
+        return TimeSpan.FromSeconds(vars.beats); 
+
     // The IGT in memory only updates once every ~0.5 seconds normally, so only
     // syntc the game time when the game "is loading" or when the IGT changes
-    if (vars.isLoading || current.igt != old.igt)
+    if (!settings["rtaNoLoads"] && vars.isLoading || current.igt != old.igt)
         return TimeSpan.FromMilliseconds(current.igt);
 }
 
