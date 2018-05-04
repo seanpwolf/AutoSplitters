@@ -86,7 +86,7 @@ startup {
     settings.Add("igtReset", true, "Reset When IGT Resets", "autoreset");
     settings.Add("lostLowReset", false, "Reset When Losing Low%", "autoreset");
     settings.Add("seedReset", true, "Reset When Seed Changes", "autoreset");
-    settings.Add("misc", true, "Misc. Settings");
+    settings.Add("misc", false, "Misc. Settings");
     settings.Add("beatCounter", false, "Use `Beat Counter' for Game Time", "misc");
     settings.Add("rtaNoLoads", false, "Use `RTA No Loads' for Game Time", "misc");
     settings.Add("debug", false, "Debug Prints (DebugView)");
@@ -128,7 +128,7 @@ update {
     vars.isStoryChar = (current.charID <= 2 || current.charID == 10);
     vars.lastZone = current.charID == 2 ? 1 : (version.Equals("2.59") ? 5 : 4);
 
-    if (current.beatCounter - old.beatCounter == 1)
+    if (old.beatCounter - current.beatCounter == 1 && !vars.isLoading)
         vars.beats++;
 
     if (current.charTime < old.charTime && current.igt > current.charTime && current.level == 1) 
@@ -138,7 +138,7 @@ update {
 start {
     if (vars.quickReset || current.igt < old.igt) {
         if (settings["debug"])
-            print("[CoND.ASL] start: new run)");
+            print("[CoND.ASL] start: new run");
         vars.beats = 0;
         vars.quickReset = false;
         vars.runCounter = 0;
@@ -249,7 +249,7 @@ gameTime {
 
     // The IGT in memory only updates once every ~0.5 seconds normally, so only
     // syntc the game time when the game "is loading" or when the IGT changes
-    if (!settings["rtaNoLoads"] && vars.isLoading || current.igt != old.igt)
+    if (!settings["rtaNoLoads"] && (vars.isLoading || current.igt != old.igt))
         return TimeSpan.FromMilliseconds(current.igt);
 }
 
