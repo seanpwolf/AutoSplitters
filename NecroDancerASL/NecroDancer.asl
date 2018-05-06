@@ -1,8 +1,6 @@
 // TODO: 
 //  - add extra documentation, maybe reformat existing documentation
-//  - add a reset flag for losing low% (if setting is checked)
-//  - option to replace IGT with RTA/noloads (ignores boss splash / menu pause)
-//  - option to replace IGT with beat counter (1 beat = 1 second?)
+//  - cleanup existing code
 
 /* 
 Overview of variables used in state descriptors:
@@ -71,6 +69,9 @@ state("NecroDancer", "2.59") { // Current patch of amplified (Steam)
     sbyte beatCounter : 0x4359B4;
     sbyte bossIntro : 0x43557C; 
     sbyte gamePaused : 0x43596C; 
+    sbyte lowPercent : 0x435AC2;
+    float xPos : 0x4358D4; // 24 = 1 tile movement (left is negative)
+    float yPos : 0x4358D8; // ^ but up is negative
 }
 
 startup {
@@ -86,7 +87,8 @@ startup {
     settings.Add("igtReset", true, "Reset When IGT Resets", "autoreset");
     settings.Add("lostLowReset", false, "Reset When Losing Low%", "autoreset");
     settings.Add("seedReset", true, "Reset When Seed Changes", "autoreset");
-    settings.Add("misc", false, "Misc. Settings");
+    settings.Add("misc", false, "Misc. Options/Settings");
+    settings.Add("bossPrac", false, "Add Auto Start/Split Conditions for Boss Practice", "misc");
     settings.Add("beatCounter", false, "Use `Beat Counter' for Game Time", "misc");
     settings.Add("rtaNoLoads", false, "Use `RTA No Loads' for Game Time", "misc");
     settings.Add("debug", false, "Debug Prints (DebugView)");
@@ -94,7 +96,10 @@ startup {
     settings.SetToolTip("endSplit", "Splits on a finished run for an individual character.");
     settings.SetToolTip("zoneSplits", "Splits after changing zones - e.g. would split on transition from 2-4 to 3-1.");
     settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g from 1-2 to 1-3). This will also split for Dead Ringer or Frakensteinway if playing as Cadence or Nocturna respectively.");
-    //settings.SetToolTip("experimental", "Some fixes/options that have been minimally tested.");
+    settings.SetToolTip("misc", "Various options/setings with (probably) niche use cases.");
+    settings.SetToolTip("bossPrac", "Starts timer on center tile of the door frame of the boss practice room and splits when hitting the tile where boss gold would normally be located.\nPairs well with the option to use the beat counter for game time.");
+    settings.SetToolTip("beatCounter", "One beat is represented as one second in LiveSplit.");
+    settings.SetToolTip("rtaNoLoads", "Unlike the IGT, the timer will only pause when loading and not on boss intro splashes nor on a pause menu.");
 
     print("[CoND.ASL] startup finished");
 }
@@ -118,6 +123,21 @@ init {
     vars.quickReset = false; 
     vars.runCounter = 0;
     vars.splits = new HashSet<string>();
+
+    // KC = 12, DM = 13, DB = 14, CR = 15, FM = 16, DR = 17, ND1 = 18, ND2 = 19, GL = 20, FSW = 21, TC = 22
+    vars.bossPracCoords = new Dictionary<sbyte, float>() {
+        {12, -432},
+        {13, -384},
+        {14, -360},
+        {15, -360},
+        {16, -408},
+        {17, -408},
+        {18, -336},
+        {19, -432},
+        {20, -408},
+        {21, -360},
+        {22, -384}
+    };
 }
 
 update {
@@ -144,6 +164,20 @@ start {
         vars.runCounter = 0;
         vars.splits.Clear();
         return true;
+    }
+    if (settings["bossPrac"] && current.level >= 12 && current.level <= 22) {
+        bool shouldStart;
+        if (current.level == 18) // ND1
+            shouldStart = (current.xPos == 24 && current.yPos == -120);
+        else 
+            shouldStart = (current.xPos == 0 && current.yPos == -144);
+
+        if (shouldStart) {
+            if (settings["debug"])
+                print("[CoND.ASL] start: boss practice");
+            vars.beats = 0;
+            return shouldStart;
+        }
     }
 }
 
@@ -202,11 +236,26 @@ split {
         vars.splits.Add(splitFlag);
         return settings["levelSplits"];
     }
+
+    // Boss Practice
+    if (settings["bossPrac"] && current.level >= 12 && current.level <= 22) {
+        shouldSplit = vars.bossPracCoords[current.level] == current.yPos;
+        if (current.level == 18) // ND1 - doesn't work (FIXME)
+            shouldSplit = (shouldSplit && current.xPos == 24);
+        else
+            shouldSplit = (shouldSplit && current.xPos == 0);
+
+        if (settings["debug"] && shouldSplit)
+            print("[CoND.ASL] split: boss practice - boss gold tile");
+
+        return shouldSplit;
+    }
 }
 
 reset {
+    bool bossPrac = (current.level >= 12 && current.level <= 22 && current.yPos >= -120);
     bool igtReset = (current.igt < old.igt);
-    bool lostLow = false;
+    bool lostLow = (current.lowPercent == 0 && old.lowPercent == 1);
     bool returnedToLobby = (current.zone == 1 && current.level == -2);
     bool seedChanged = false;
 
@@ -217,6 +266,12 @@ reset {
         vars.quickReset = seedChanged;
     }
 
+    returnedToLobby = settings["lobbyReset"] && returnedToLobby;
+    igtReset = settings["igtReset"] && igtReset;
+    seedChanged = settings["seedReset"] && seedChanged;
+    lostLow = settings["lostLowReset"] && lostLow;
+    bossPrac = settings["bossPrac"] && bossPrac;
+
     if (settings["debug"]) {
         if (returnedToLobby) 
             print("[CoND.ASL] reset: `returned to lobby'");
@@ -224,14 +279,13 @@ reset {
             print("[CoND.ASL] reset: `IGT reset'");
         else if (seedChanged)
             print("[CoND.ASL] reset: `seed change'");
+        else if (lostLow)
+            print("[CoND.ASL] reset: `low% lost'");
+        else if (bossPrac)
+            print("[CoND.ASL] reset: `boss practice'");
     }
 
-    returnedToLobby = settings["lobbyReset"] && returnedToLobby;
-    igtReset = settings["igtReset"] && igtReset;
-    seedChanged = settings["seedReset"] && seedChanged;
-    lostLow = settings["lostLowReset"] && lostLow;
-
-    return (returnedToLobby || igtReset || seedChanged || lostLow);
+    return (returnedToLobby || igtReset || seedChanged || lostLow || bossPrac);
 }
 
 isLoading {
@@ -245,7 +299,7 @@ isLoading {
 
 gameTime {
     if (settings["beatCounter"])
-        return TimeSpan.FromSeconds(vars.beats); 
+        return TimeSpan.FromMilliseconds(vars.beats * 10); 
 
     // The IGT in memory only updates once every ~0.5 seconds normally, so only
     // syntc the game time when the game "is loading" or when the IGT changes
