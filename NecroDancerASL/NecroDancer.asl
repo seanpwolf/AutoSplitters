@@ -2,86 +2,66 @@
 //  - add extra documentation, maybe reformat existing documentation
 //  - cleanup existing code
 
-/* 
-Overview of variables used in state descriptors:
-  
-  charTime: the IGT of a single character run (it would reset to 0 for a new
-            run/character in multi-char modes or deathless). Stored in 
-            milliseconds, syncs every ~31 frames in normal gameplay or sooner 
-            if the game is paused/loading.
-
-  songTime: the elapsed time in ms of the current song. Not too useful, but
-            is used in this script to avoid bugs of auto-reset failing for 
-            <1 second resets in game (e.g. resetting for immediate shriner).
-
-  igt:      the IGT, except it is preserved for each run/character in 
-            multi-char modes or deathless. Otherwise, behaves mostly 
-            identically to `charTime'.
-
-  charID:   current ID of the player character (P1, coop not tested), which
-            can be any of the following values (between 0-13 inclusive):
-                0 = Cadence, 1 = Melody, 2 = Aria, 3 = Dorian, 4 = Eli
-                5 = Monk, 6 = Dove, 7 = Coda, 8 = Bolt, 9 = Bard
-                10 = Nocturna, 11 = Diamond, 12 = Mary, 13 = Tempo
-
-  level:    current level or floor the player is on (e.g. 2 for 3-2). Some 
-            notable values include x-5 for the final story boss level on story  
-            characters (x-5 is the victory flag for non-story characters), x-6 
-            for the story char victory flag, and a value of -2 for the lobby.
-
-  loading:  flag to indicate the IGT is paused for a multiple of reasons -
-            some of which are if the game is "loading", on a pause screen, 
-            on a boss intro splash, on character death, or run victory. Has a
-            value of 0 if IGT is or should be paused and is non-zero otherwise.
-   
-  zone:     current zone or depth the player is on (e.g. 2 for 2-3). Aria's
-            zone reversal is reflected (starts zone 5/4, ends zone 1), but not
-            many other notable changes from expected behavior aside from a few
-            lobby quirks where the value will go above 5.
-*/
+// State Descriptor Variables:
+//
+// beatCounter : Initial value of -1, decrements by one for every beat passed 
+// charTime    : IGT for a single char/run, syncs every ~0.5 seconds in normal gameplay
+// igt         : IGT for all chars/runs, syncs every ~0.5 seconds in normal gameplay
+// seed        : Has a value of -1 on lobby or for a few frames in between quick resets
+// xPos        : Number of pixels from initial position; value of 24 is 1 tile, negative/positive values are left/right respectively
+// yPos        : ^ but negative/positive values are up/down respectively
+// bossIntro   : Value of 1 on boss intro splash screens, 0 otherwise
+// charID      : 0 = Cadence, 1 = Melody, 2 = Aria, 3 = Dorian, 4 = Eli, 
+//               5 = Monk, 6 = Dove, 7 = Coda, 8 = Bolt, 9 = Bard, 
+//               10 = Nocturna, 11 = Diamond, 12 = Mary, 13 = Tempo
+// deathless   : Value of 1 if in deathless mode, 0 otherwise
+// gamePaused  : Value of 1 if paused or in a menu, 0 otherwise
+// level       : Current level/floor
+// loading     : Value of 0 if on a load screen, in a menu, or while a boss splash is up; non-zero otherwise
+// lowPercent  : Value of 1 if still low%, 0 if low% is lost
+// zone        : Current zone/depth
 
 state("NecroDancer") {}
 
-state("NecroDancer", "1.29") { // Current patch of classic/predlc (Steam)
-    int charTime : 0x3BF6C8;
-    int igt : 0x3BF6D0;   
-    //int seed : 0x3????;
-    sbyte charID : 0x3BA354, 0x14, 0x100; 
-    sbyte zone : 0x3BF988;                
-    sbyte level : 0x3BF98C;
-    sbyte loading : 0x3BF6CE;
-    //int songTime : 0x3BF61C;
-    //sbyte beatCounter : 0x3BF???; 
-    //sbyte bossIntro : 0x3BF???; 
-    //sbyte gamePaused : 0x3BF6C7; 
+state("NecroDancer", "1.29") {    // Current patch of classic/predlc (Steam)
+    //int beatCounter : 0x3BF???; 
+    int charTime      : 0x3BF6C8;
+    int igt           : 0x3BF6D0;   
+    //int seed          : 0x3?????;
+    //float xPos        : 0x3BF???;
+    //float yPos        : 0x3BF???;
+    //sbyte bossIntro   : 0x3BF???; 
+    sbyte charID      : 0x3BA354, 0x14, 0x100; 
+    //sbyte deathless   : 0x3BF???;
+    sbyte gamePaused  : 0x3BF6C7; 
+    sbyte level       : 0x3BF98C;
+    sbyte loading     : 0x3BF6CE;
+    //sbyte lowPercent  : 0x3BF???;
+    sbyte zone        : 0x3BF988;                
 }
 
-state("NecroDancer", "2.59") { // Current patch of amplified (Steam)
-    int charTime : 0x43593C;
-    int igt : 0x435944;
-    int seed : 0x435AF4;
-    sbyte charID : 0x435770, 8, 4, 0x11c;
-    sbyte deathless : 0x435BBD;
-    sbyte level : 0x435C10;
-    sbyte loading : 0x435942;
-    sbyte zone : 0x435C0C; 
-    //int songTime : 0x435808;
-    sbyte beatCounter : 0x4359B4;
-    sbyte bossIntro : 0x43557C; 
+state("NecroDancer", "2.59") {    // Current patch of amplified (Steam)
+    int beatCounter  : 0x4359B4;
+    int charTime     : 0x43593C;
+    int igt          : 0x435944;
+    int seed         : 0x435AF4;
+    float xPos       : 0x4358D4; 
+    float yPos       : 0x4358D8;
+    sbyte bossIntro  : 0x43557C; 
+    sbyte charID     : 0x435770, 8, 4, 0x11c;
+    sbyte deathless  : 0x435BBD;
     sbyte gamePaused : 0x43596C; 
+    sbyte level      : 0x435C10;
+    sbyte loading    : 0x435942;
     sbyte lowPercent : 0x435AC2;
-    float xPos : 0x4358D4; // 24 = 1 tile movement (left is negative)
-    float yPos : 0x4358D8; // ^ but up is negative
+    sbyte zone       : 0x435C0C; 
 }
 
 startup {
-    refreshRate = 60; 
-
     settings.Add("splits", true, "Auto Split Settings");
     settings.Add("endSplit", true, "Split On Run Finish", "splits");
     settings.Add("zoneSplits", true, "Split On Zone Change", "endSplit");
     settings.Add("levelSplits", false, "Split On Level Change", "zoneSplits");
-    //settings.Add("experimental", false, "Experimental Fixes/Options");
     settings.Add("autoreset", true, "Auto Reset Settings");
     settings.Add("lobbyReset", true, "Reset On Returning To Lobby", "autoreset");
     settings.Add("igtReset", true, "Reset When IGT Resets", "autoreset");
@@ -92,13 +72,16 @@ startup {
     settings.Add("beatCounter", false, "Use `Beat Counter' for Game Time", "misc");
     settings.Add("rtaNoLoads", false, "Use `RTA No Loads' for Game Time", "misc");
     settings.Add("debug", false, "Debug Prints (DebugView)");
+    settings.Add("lowRefresh", false, "Use Lower Script Refresh Rate");
 
     settings.SetToolTip("endSplit", "Splits on a finished run for an individual character.");
     settings.SetToolTip("zoneSplits", "Splits after changing zones - e.g. would split on transition from 2-4 to 3-1.");
-    settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g from 1-2 to 1-3). This will also split for Dead Ringer or Frakensteinway if playing as Cadence or Nocturna respectively.");
+    settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g from 1-2 to 1-3).\nThis will also split for Dead Ringer or Frakensteinway if playing as Cadence or Nocturna respectively.");
+    settings.SetToolTip("igtReset", "Covers most quick restart cases, except quick resets when the IGT is less than ~1 second.");
+    settings.SetToolTip("seedReset", "Covers quick resets when the IGT is less than ~1 second.");
     settings.SetToolTip("misc", "Various options/setings with (probably) niche use cases.");
-    settings.SetToolTip("bossPrac", "Starts timer on center tile of the door frame of the boss practice room and splits when hitting the tile where boss gold would normally be located.\nPairs well with the option to use the beat counter for game time.");
-    settings.SetToolTip("beatCounter", "One beat is represented as one second in LiveSplit.");
+    settings.SetToolTip("bossPrac", "Starts timer on center tile of the door frame of the boss practice room,\n and splits when hitting the tile where boss gold would normally be located.\nPairs well with the option to use the beat counter for game time.");
+    settings.SetToolTip("beatCounter", "One beat is represented as ten milliseconds (0.01 seconds) in LiveSplit. Slightly buggy with non-bard characters (seems inconsistent, sometimes will start at 1 and sometimes will start at 0).");
     settings.SetToolTip("rtaNoLoads", "Unlike the IGT, the timer will only pause when loading and not on boss intro splashes nor on a pause menu.");
 
     print("[CoND.ASL] startup finished");
@@ -116,7 +99,15 @@ init {
     if (settings["debug"])
         print(String.Format("[CoND.ASL] Version: `{0}'", version));
 
+    if (settings["lowRefresh"])
+        refreshRate = 30;
+    else
+        refreshRate = 60;
+    if (settings["debug"])
+        print(String.Format("[CoND.ASL] refreshRate: {0}", refreshRate));
+
     vars.beats = 0;
+    vars.beatLock = false;
     vars.isLoading = false;
     vars.isStoryChar = false;
     vars.lastZone = 0;
@@ -124,19 +115,19 @@ init {
     vars.runCounter = 0;
     vars.splits = new HashSet<string>();
 
-    // KC = 12, DM = 13, DB = 14, CR = 15, FM = 16, DR = 17, ND1 = 18, ND2 = 19, GL = 20, FSW = 21, TC = 22
+    // Helper for Boss Practice Splitting (key: level, value: yPos)
     vars.bossPracCoords = new Dictionary<sbyte, float>() {
-        {12, -432},
-        {13, -384},
-        {14, -360},
-        {15, -360},
-        {16, -408},
-        {17, -408},
-        {18, -336},
-        {19, -432},
-        {20, -408},
-        {21, -360},
-        {22, -384}
+        {12, -432}, // KC
+        {13, -384}, // DM
+        {14, -360}, // DB
+        {15, -360}, // CR
+        {16, -408}, // FM
+        {17, -408}, // DR
+        {18, -336}, // ND1
+        {19, -432}, // ND2
+        {20, -408}, // GL
+        {21, -360}, // FSW
+        {22, -384}  // TC
     };
 }
 
@@ -148,14 +139,27 @@ update {
     vars.isStoryChar = (current.charID <= 2 || current.charID == 10);
     vars.lastZone = current.charID == 2 ? 1 : (version.Equals("2.59") ? 5 : 4);
 
-    if (old.beatCounter - current.beatCounter == 1 && !vars.isLoading)
+    if (old.beatCounter - current.beatCounter == 1 && !vars.isLoading && !vars.beatLock)
         vars.beats++;
 
     if (current.charTime < old.charTime && current.igt > current.charTime && current.level == 1) 
         vars.runCounter++;
+
+    // Boss Practice
+    if (settings["bossPrac"] && !vars.beatLock && current.level >= 12 && current.level <= 22) {
+        vars.beatLock = vars.bossPracCoords[current.level] == current.yPos;
+        if (current.level != 18) 
+            vars.beatLock = (vars.beatLock && current.xPos == 0);
+        //else // ND1, currently broken (FIXME)
+            //shouldSplit = (shouldSplit && current.xPos == 24);
+
+        if (settings["debug"] && vars.beatLock)
+            print("[CoND.ASL] boss practice - boss gold tile");
+    }
 }
 
 start {
+    // Normal Runs
     if (vars.quickReset || current.igt < old.igt) {
         if (settings["debug"])
             print("[CoND.ASL] start: new run");
@@ -165,6 +169,8 @@ start {
         vars.splits.Clear();
         return true;
     }
+
+    // Boss Practice
     if (settings["bossPrac"] && current.level >= 12 && current.level <= 22) {
         bool shouldStart;
         if (current.level == 18) // ND1
@@ -176,6 +182,7 @@ start {
             if (settings["debug"])
                 print("[CoND.ASL] start: boss practice");
             vars.beats = 0;
+            vars.beatLock = false;
             return shouldStart;
         }
     }
@@ -188,7 +195,7 @@ split {
     if (vars.splits.Contains(splitFlag))
         return false;
 
-    // Run Finish Split
+    // Run Finish
     if (current.zone == vars.lastZone && current.level >= 4 && current.level != old.level) {
         if (vars.isStoryChar) 
             shouldSplit = (current.level == 6 && old.level == 5);
@@ -212,7 +219,7 @@ split {
         return settings["endSplit"];
     }
 
-    // Zone/Depth Change Splits
+    // Zone/Depth Change 
     if (Math.Abs(current.zone - old.zone) == 1 && old.level >= 3 && current.level == 1) {
         if (current.charID == 2) // Aria
             shouldSplit = current.zone < old.zone && old.level == 4;
@@ -229,26 +236,12 @@ split {
         }
     }
 
-    // Level/Floor Change Splits
+    // Level/Floor Change 
     if (current.zone == old.zone && current.level > old.level && old.level > 0) {
         if (settings["debug"])
             print(String.Format("[CoND.ASL] split: {0} (`level change')", splitFlag));
         vars.splits.Add(splitFlag);
         return settings["levelSplits"];
-    }
-
-    // Boss Practice
-    if (settings["bossPrac"] && current.level >= 12 && current.level <= 22) {
-        shouldSplit = vars.bossPracCoords[current.level] == current.yPos;
-        if (current.level == 18) // ND1 - doesn't work (FIXME)
-            shouldSplit = (shouldSplit && current.xPos == 24);
-        else
-            shouldSplit = (shouldSplit && current.xPos == 0);
-
-        if (settings["debug"] && shouldSplit)
-            print("[CoND.ASL] split: boss practice - boss gold tile");
-
-        return shouldSplit;
     }
 }
 
