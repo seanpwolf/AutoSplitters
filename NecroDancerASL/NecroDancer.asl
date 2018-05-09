@@ -1,6 +1,6 @@
 // TODO: 
-//  - add extra documentation, maybe reformat existing documentation
-//  - cleanup existing code
+//  - Fix and add 1.29 offsets/addresses
+//  - maybe touch up settings tooltips?
 
 // State Descriptor Variables:
 //
@@ -58,6 +58,8 @@ state("NecroDancer", "2.59") {    // Current patch of amplified (Steam)
 }
 
 startup {
+    refreshRate = 60;
+
     settings.Add("splits", true, "Auto Split Settings");
     settings.Add("endSplit", true, "Split On Run Finish", "splits");
     settings.Add("zoneSplits", true, "Split On Zone Change", "endSplit");
@@ -71,8 +73,6 @@ startup {
     settings.Add("bossPrac", false, "Add Auto Start/Split Conditions for Boss Practice", "misc");
     settings.Add("beatCounter", false, "Use `Beat Counter' for Game Time", "misc");
     settings.Add("rtaNoLoads", false, "Use `RTA No Loads' for Game Time", "misc");
-    settings.Add("debug", false, "Debug Prints (DebugView)");
-    settings.Add("lowRefresh", false, "Use Lower Script Refresh Rate");
 
     settings.SetToolTip("endSplit", "Splits on a finished run for an individual character.");
     settings.SetToolTip("zoneSplits", "Splits after changing zones - e.g. would split on transition from 2-4 to 3-1.");
@@ -83,8 +83,6 @@ startup {
     settings.SetToolTip("bossPrac", "Starts timer on center tile of the door frame of the boss practice room,\n and splits when hitting the tile where boss gold would normally be located.\nPairs well with the option to use the beat counter for game time.");
     settings.SetToolTip("beatCounter", "One beat is represented as ten milliseconds (0.01 seconds) in LiveSplit. Slightly buggy with non-bard characters (seems inconsistent, sometimes will start at 1 and sometimes will start at 0).");
     settings.SetToolTip("rtaNoLoads", "Unlike the IGT, the timer will only pause when loading and not on boss intro splashes nor on a pause menu.");
-
-    print("[CoND.ASL] startup finished");
 }
 
 init {
@@ -96,77 +94,25 @@ init {
     else 
         version = String.Format("<unknown> (0x{0:X8})", mms);
 
-    if (settings["debug"])
-        print(String.Format("[CoND.ASL] Version: `{0}'", version));
-
-    if (settings["lowRefresh"])
-        refreshRate = 30;
-    else
-        refreshRate = 60;
-    if (settings["debug"])
-        print(String.Format("[CoND.ASL] refreshRate: {0}", refreshRate));
-
     vars.beats = 0;
-    vars.beatLock = false;
     vars.isLoading = false;
-    vars.isStoryChar = false;
-    vars.lastZone = 0;
     vars.quickReset = false; 
-    vars.runCounter = 0;
-    vars.splits = new HashSet<string>();
-
-    // Helper for Boss Practice Splitting (key: level, value: yPos)
-    vars.bossPracCoords = new Dictionary<sbyte, float>() {
-        {12, -432}, // KC
-        {13, -384}, // DM
-        {14, -360}, // DB
-        {15, -360}, // CR
-        {16, -408}, // FM
-        {17, -408}, // DR
-        {18, -336}, // ND1
-        {19, -432}, // ND2
-        {20, -408}, // GL
-        {21, -360}, // FSW
-        {22, -384}  // TC
-    };
 }
 
 update {
     if (version.Contains("<unknown>")) return false; 
     if (!version.Equals("2.59")) return false; // FIXME - temporary
 
-    vars.isLoading = (current.loading == 0);
-    vars.isStoryChar = (current.charID <= 2 || current.charID == 10);
-    vars.lastZone = current.charID == 2 ? 1 : (version.Equals("2.59") ? 5 : 4);
-
-    if (old.beatCounter - current.beatCounter == 1 && !vars.isLoading && !vars.beatLock)
+    if (old.beatCounter - current.beatCounter == 1 && !vars.isLoading)
         vars.beats++;
-
-    if (current.charTime < old.charTime && current.igt > current.charTime && current.level == 1) 
-        vars.runCounter++;
-
-    // Boss Practice
-    if (settings["bossPrac"] && !vars.beatLock && current.level >= 12 && current.level <= 22) {
-        vars.beatLock = vars.bossPracCoords[current.level] == current.yPos;
-        if (current.level != 18) 
-            vars.beatLock = (vars.beatLock && current.xPos == 0);
-        //else // ND1, currently broken (FIXME)
-            //shouldSplit = (shouldSplit && current.xPos == 24);
-
-        if (settings["debug"] && vars.beatLock)
-            print("[CoND.ASL] boss practice - boss gold tile");
-    }
+    vars.isLoading = (current.loading == 0);
 }
 
 start {
     // Normal Runs
     if (vars.quickReset || current.igt < old.igt) {
-        if (settings["debug"])
-            print("[CoND.ASL] start: new run");
         vars.beats = 0;
         vars.quickReset = false;
-        vars.runCounter = 0;
-        vars.splits.Clear();
         return true;
     }
 
@@ -177,47 +123,31 @@ start {
             shouldStart = (current.xPos == 24 && current.yPos == -120);
         else 
             shouldStart = (current.xPos == 0 && current.yPos == -144);
-
-        if (shouldStart) {
-            if (settings["debug"])
-                print("[CoND.ASL] start: boss practice");
-            vars.beats = 0;
-            vars.beatLock = false;
-            return shouldStart;
-        }
+        vars.beats = shouldStart ? 0 : vars.beats;
+        return shouldStart;
     }
 }
 
 split {
     bool shouldSplit = false;
-    string splitFlag = String.Format("R{0}_C{1}:Z{2}-L{3}", vars.runCounter, old.charID, old.zone, old.level);
-
-    if (vars.splits.Contains(splitFlag))
-        return false;
+    var lastZone = current.charID == 2 ? 1 : (version.Equals("2.59") ? 5 : 4);
 
     // Run Finish
-    if (current.zone == vars.lastZone && current.level >= 4 && current.level != old.level) {
-        if (vars.isStoryChar) 
+    if (current.zone == lastZone && current.level >= 4 && current.level != old.level) {
+        if (current.charID <= 2 || current.charID == 10) // Story Character
             shouldSplit = (current.level == 6 && old.level == 5);
         else if (current.charID == 6) // Dove
             shouldSplit = (current.level == 5 && old.level == 3);
         else
             shouldSplit = (current.level == 5 && old.level == 4);
 
-        if (shouldSplit) { 
-            if (settings["debug"])
-                print(String.Format("[CoND.ASL] split: {0} (`run finish')", splitFlag));
-            vars.splits.Add(splitFlag);
+        if (shouldSplit)
             return settings["endSplit"];
-        }
     }
 
     // Deathless Mode Workaround (Run Finish)
-    if (current.deathless == 1 && current.charTime < old.charTime && current.igt > current.charTime) {
-        if (settings["debug"])
-            print(String.Format("[CoND.ASL] split: {0} (`deathless win')", splitFlag));
+    if (current.deathless == 1 && current.charTime < old.charTime && current.igt > current.charTime) 
         return settings["endSplit"];
-    }
 
     // Zone/Depth Change 
     if (Math.Abs(current.zone - old.zone) == 1 && old.level >= 3 && current.level == 1) {
@@ -228,56 +158,28 @@ split {
         else
             shouldSplit = current.zone > old.zone && old.level == 4;
 
-        if (shouldSplit) {
-            if (settings["debug"])
-                print(String.Format("[CoND.ASL] split: {0} (`zone change')", splitFlag));
-            vars.splits.Add(splitFlag);
+        if (shouldSplit) 
             return settings["zoneSplits"];
-        }
     }
 
     // Level/Floor Change 
-    if (current.zone == old.zone && current.level > old.level && old.level > 0) {
-        if (settings["debug"])
-            print(String.Format("[CoND.ASL] split: {0} (`level change')", splitFlag));
-        vars.splits.Add(splitFlag);
+    if (current.zone == old.zone && current.level > old.level && old.level > 0) 
         return settings["levelSplits"];
-    }
 }
 
 reset {
-    bool bossPrac = (current.level >= 12 && current.level <= 22 && current.yPos >= -120);
-    bool igtReset = (current.igt < old.igt);
-    bool lostLow = (current.lowPercent == 0 && old.lowPercent == 1);
-    bool returnedToLobby = (current.zone == 1 && current.level == -2);
+    bool bossPrac = settings["bossPrac"] && (current.level >= 12 && current.level <= 22 && current.yPos >= -120);
+    bool igtReset = settings["igtReset"] && (current.igt < old.igt);
+    bool lostLow = settings["lostLowReset"] && (current.lowPercent == 0 && old.lowPercent == 1);
+    bool returnedToLobby = settings["lobbyReset"] && (current.zone == 1 && current.level == -2);
     bool seedChanged = false;
 
     // Workaround if the player quick resets at the start in rapid succession,
     // as the IGT takes ~1 second to sync in memory at the start of a run
-    if (current.igt == old.igt && old.igt == 0) {
-        seedChanged = (current.seed > old.seed);
-        vars.quickReset = seedChanged;
-    }
+    if (current.igt == old.igt && old.igt == 0)
+        seedChanged = settings["seedReset"] && (current.seed > old.seed);
 
-    returnedToLobby = settings["lobbyReset"] && returnedToLobby;
-    igtReset = settings["igtReset"] && igtReset;
-    seedChanged = settings["seedReset"] && seedChanged;
-    lostLow = settings["lostLowReset"] && lostLow;
-    bossPrac = settings["bossPrac"] && bossPrac;
-
-    if (settings["debug"]) {
-        if (returnedToLobby) 
-            print("[CoND.ASL] reset: `returned to lobby'");
-        else if (igtReset) 
-            print("[CoND.ASL] reset: `IGT reset'");
-        else if (seedChanged)
-            print("[CoND.ASL] reset: `seed change'");
-        else if (lostLow)
-            print("[CoND.ASL] reset: `low% lost'");
-        else if (bossPrac)
-            print("[CoND.ASL] reset: `boss practice'");
-    }
-
+    vars.quickReset = seedChanged;
     return (returnedToLobby || igtReset || seedChanged || lostLow || bossPrac);
 }
 
