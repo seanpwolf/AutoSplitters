@@ -1,6 +1,6 @@
 // TODO: 
-//  - Fix and add 1.29 offsets/addresses
 //  - maybe touch up settings tooltips?
+//  - readd splits hashset (needed for races to avoid multi splits)
 
 // State Descriptor Variables:
 //
@@ -23,24 +23,24 @@
 
 state("NecroDancer") {}
 
-state("NecroDancer", "1.29") {    // Current patch of classic/predlc (Steam)
-    //int beatCounter : 0x3BF???; 
-    int charTime      : 0x3BF6C8;
-    int igt           : 0x3BF6D0;   
-    //int seed          : 0x3?????;
-    //float xPos        : 0x3BF???;
-    //float yPos        : 0x3BF???;
-    //sbyte bossIntro   : 0x3BF???; 
-    sbyte charID      : 0x3BA354, 0x14, 0x100; 
-    //sbyte deathless   : 0x3BF???;
-    sbyte gamePaused  : 0x3BF6C7; 
-    sbyte level       : 0x3BF98C;
-    sbyte loading     : 0x3BF6CE;
-    //sbyte lowPercent  : 0x3BF???;
-    sbyte zone        : 0x3BF988;                
+state("NecroDancer", "1.29 (Steam)") { // predlc/classic
+    int beatCounter  : 0x3BF740; 
+    int charTime     : 0x3BF6C8;
+    int igt          : 0x3BF6D0;   
+    int seed         : 0x3BF874;
+    float xPos       : 0x3BF560;
+    float yPos       : 0x3BF64C;
+    sbyte bossIntro  : 0x3BF408; 
+    sbyte charID     : 0x3BA354, 0x14, 0x100; 
+    sbyte deathless  : 0x3BF945;
+    sbyte gamePaused : 0x3BF6C7; 
+    sbyte level      : 0x3BF98C;
+    sbyte loading    : 0x3BF6CE;
+    sbyte lowPercent : 0x3BF847;
+    sbyte zone       : 0x3BF988;                
 }
 
-state("NecroDancer", "2.59") {    // Current patch of amplified (Steam)
+state("NecroDancer", "2.59 (Steam)") { // amplified
     int beatCounter  : 0x4359B4;
     int charTime     : 0x43593C;
     int igt          : 0x435944;
@@ -58,8 +58,6 @@ state("NecroDancer", "2.59") {    // Current patch of amplified (Steam)
 }
 
 startup {
-    refreshRate = 60;
-
     settings.Add("splits", true, "Auto Split Settings");
     settings.Add("endSplit", true, "Split On Run Finish", "splits");
     settings.Add("zoneSplits", true, "Split On Zone Change", "endSplit");
@@ -88,9 +86,9 @@ startup {
 init {
     int mms = modules.First().ModuleMemorySize;
 	if (mms == 0x4FF000)
-        version = "1.29";
+        version = "1.29 (Steam)";
 	else if (mms == 0x561000)
-        version = "2.59";
+        version = "2.59 (Steam)";
     else 
         version = String.Format("<unknown> (0x{0:X8})", mms);
 
@@ -101,11 +99,10 @@ init {
 
 update {
     if (version.Contains("<unknown>")) return false; 
-    if (!version.Equals("2.59")) return false; // FIXME - temporary
 
+    vars.isLoading = (current.loading == 0);
     if (old.beatCounter - current.beatCounter == 1 && !vars.isLoading)
         vars.beats++;
-    vars.isLoading = (current.loading == 0);
 }
 
 start {
@@ -130,7 +127,7 @@ start {
 
 split {
     bool shouldSplit = false;
-    var lastZone = current.charID == 2 ? 1 : (version.Equals("2.59") ? 5 : 4);
+    var lastZone = current.charID == 2 ? 1 : (version.Contains("2.59") ? 5 : 4);
 
     // Run Finish
     if (current.zone == lastZone && current.level >= 4 && current.level != old.level) {
@@ -158,8 +155,7 @@ split {
         else
             shouldSplit = current.zone > old.zone && old.level == 4;
 
-        if (shouldSplit) 
-            return settings["zoneSplits"];
+        return settings["zoneSplits"] && shouldSplit;
     }
 
     // Level/Floor Change 
@@ -197,7 +193,7 @@ gameTime {
         return TimeSpan.FromMilliseconds(vars.beats * 10); 
 
     // The IGT in memory only updates once every ~0.5 seconds normally, so only
-    // syntc the game time when the game "is loading" or when the IGT changes
+    // sync the game time when the game "is loading" or when the IGT changes
     if (!settings["rtaNoLoads"] && (vars.isLoading || current.igt != old.igt))
         return TimeSpan.FromMilliseconds(current.igt);
 }
