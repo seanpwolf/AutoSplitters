@@ -1,6 +1,5 @@
 // TODO: 
 //  - maybe touch up settings tooltips?
-//  - readd splits hashset (needed for races to avoid multi splits)
 
 // State Descriptor Variables:
 //
@@ -58,6 +57,8 @@ state("NecroDancer", "2.59 (Steam)") { // amplified
 }
 
 startup {
+    refreshRate = 60;
+
     settings.Add("splits", true, "Auto Split Settings");
     settings.Add("endSplit", true, "Split On Run Finish", "splits");
     settings.Add("zoneSplits", true, "Split On Zone Change", "endSplit");
@@ -95,6 +96,8 @@ init {
     vars.beats = 0;
     vars.isLoading = false;
     vars.quickReset = false; 
+    vars.runCounter = 0;
+    vars.splits = new HashSet<string>();
 }
 
 update {
@@ -103,6 +106,8 @@ update {
     vars.isLoading = (current.loading == 0);
     if (old.beatCounter - current.beatCounter == 1 && !vars.isLoading)
         vars.beats++;
+    if (current.charTime < old.charTime && current.igt > current.charTIme && current.level == 1)
+        vars.runCounter++;
 }
 
 start {
@@ -110,6 +115,8 @@ start {
     if (vars.quickReset || current.igt < old.igt) {
         vars.beats = 0;
         vars.quickReset = false;
+        vars.runCounter = 0;
+        vars.splits.Clear();
         return true;
     }
 
@@ -128,6 +135,10 @@ start {
 split {
     bool shouldSplit = false;
     var lastZone = current.charID == 2 ? 1 : (version.Contains("2.59") ? 5 : 4);
+    string splitFlag = String.Format("R{0}_C{1}:Z{2}-L{3}", vars.runCounter, old.charID, old.zone, old.level);
+
+    if (vars.splits.Contains(splitFlag))
+        return false;
 
     // Run Finish
     if (current.zone == lastZone && current.level >= 4 && current.level != old.level) {
@@ -138,8 +149,10 @@ split {
         else
             shouldSplit = (current.level == 5 && old.level == 4);
 
-        if (shouldSplit)
+        if (shouldSplit) {
+            vars.splits.Add(splitFlag);
             return settings["endSplit"];
+        }
     }
 
     // Deathless Mode Workaround (Run Finish)
@@ -155,12 +168,17 @@ split {
         else
             shouldSplit = current.zone > old.zone && old.level == 4;
 
-        return settings["zoneSplits"] && shouldSplit;
+        if (shouldSplit) {
+            vars.splits.Add(splitFlag);
+            return settings["zoneSplits"];
+        }
     }
 
     // Level/Floor Change 
-    if (current.zone == old.zone && current.level > old.level && old.level > 0) 
+    if (current.zone == old.zone && current.level > old.level && old.level > 0) {
+        vars.splits.Add(splitFlag);
         return settings["levelSplits"];
+    }
 }
 
 reset {
