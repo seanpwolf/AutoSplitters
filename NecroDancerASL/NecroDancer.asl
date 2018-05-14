@@ -1,6 +1,3 @@
-// TODO: 
-//  - maybe touch up settings tooltips?
-
 // State Descriptor Variables:
 //
 // beatCounter : Initial value of -1, decrements by one for every beat passed 
@@ -67,17 +64,15 @@ startup {
     settings.Add("lobbyReset", true, "Reset On Returning To Lobby", "autoreset");
     settings.Add("igtReset", true, "Reset When IGT Resets", "autoreset");
     settings.Add("lostLowReset", false, "Reset When Losing Low%", "autoreset");
-    settings.Add("seedReset", true, "Reset When Seed Changes", "autoreset");
     settings.Add("misc", false, "Misc. Options/Settings");
     settings.Add("bossPrac", false, "Add Auto Start/Split Conditions for Boss Practice", "misc");
     settings.Add("beatCounter", false, "Use `Beat Counter' for Game Time", "misc");
     settings.Add("rtaNoLoads", false, "Use `RTA No Loads' for Game Time", "misc");
 
     settings.SetToolTip("endSplit", "Splits on a finished run for an individual character.");
-    settings.SetToolTip("zoneSplits", "Splits after changing zones - e.g. would split on transition from 2-4 to 3-1.");
-    settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g from 1-2 to 1-3).\nThis will also split for Dead Ringer or Frakensteinway if playing as Cadence or Nocturna respectively.");
-    settings.SetToolTip("igtReset", "Covers most quick restart cases, except quick resets when the IGT is less than ~1 second.");
-    settings.SetToolTip("seedReset", "Covers quick resets when the IGT is less than ~1 second.");
+    settings.SetToolTip("zoneSplits", "Splits after changing zones/depths (e.g. would split on transition from 2-4 to 3-1).");
+    settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g would split on transition from 1-2 to 1-3).\nThis will also split for Dead Ringer or Frakensteinway if playing as Cadence or Nocturna respectively.");
+    settings.SetToolTip("igtReset", "Resets the timer when the IGT is initialized and reset (usually a quick restart in game).");
     settings.SetToolTip("misc", "Various options/setings with (probably) niche use cases.");
     settings.SetToolTip("bossPrac", "Starts timer on center tile of the door frame of the boss practice room,\n and splits when hitting the tile where boss gold would normally be located.\nPairs well with the option to use the beat counter for game time.");
     settings.SetToolTip("beatCounter", "One beat is represented as ten milliseconds (0.01 seconds) in LiveSplit. Slightly buggy with non-bard characters (seems inconsistent, sometimes will start at 1 and sometimes will start at 0).");
@@ -106,7 +101,7 @@ update {
     vars.isLoading = (current.loading == 0);
     if (old.beatCounter - current.beatCounter == 1 && !vars.isLoading)
         vars.beats++;
-    if (current.charTime < old.charTime && current.igt > current.charTIme && current.level == 1)
+    if (current.charTime < old.charTime && current.igt > current.charTime && current.level == 1)
         vars.runCounter++;
 }
 
@@ -160,7 +155,7 @@ split {
         return settings["endSplit"];
 
     // Zone/Depth Change 
-    if (Math.Abs(current.zone - old.zone) == 1 && old.level >= 3 && current.level == 1) {
+    if (Math.Abs(current.zone - old.zone) == 1 && old.level >= 3) {
         if (current.charID == 2) // Aria
             shouldSplit = current.zone < old.zone && old.level == 4;
         else if (current.charID == 6) // Dove
@@ -191,7 +186,7 @@ reset {
     // Workaround if the player quick resets at the start in rapid succession,
     // as the IGT takes ~1 second to sync in memory at the start of a run
     if (current.igt == old.igt && old.igt == 0)
-        seedChanged = settings["seedReset"] && (current.seed > old.seed);
+        seedChanged = settings["igtReset"] && (current.seed > old.seed);
 
     vars.quickReset = seedChanged;
     return (returnedToLobby || igtReset || seedChanged || lostLow || bossPrac);
