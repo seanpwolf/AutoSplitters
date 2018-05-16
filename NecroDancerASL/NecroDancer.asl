@@ -1,17 +1,12 @@
 // State Descriptor Variables:
 //
-// beatCounter : Initial value of -1, decrements by one for every beat passed 
 // charTime    : IGT for a single char/run, syncs every ~0.5 seconds in normal gameplay
 // igt         : IGT for all chars/runs, syncs every ~0.5 seconds in normal gameplay
 // seed        : Has a value of -1 on lobby or for a few frames in between quick resets
-// xPos        : Number of pixels from initial position; value of 24 is 1 tile, negative/positive values are left/right respectively
-// yPos        : ^ but negative/positive values are up/down respectively
-// bossIntro   : Value of 1 on boss intro splash screens, 0 otherwise
 // charID      : 0 = Cadence, 1 = Melody, 2 = Aria, 3 = Dorian, 4 = Eli, 
 //               5 = Monk, 6 = Dove, 7 = Coda, 8 = Bolt, 9 = Bard, 
 //               10 = Nocturna, 11 = Diamond, 12 = Mary, 13 = Tempo
 // deathless   : Value of 1 if in deathless mode, 0 otherwise
-// gamePaused  : Value of 1 if paused or in a menu, 0 otherwise
 // level       : Current level/floor
 // loading     : Value of 0 if on a load screen, in a menu, or while a boss splash is up; non-zero otherwise
 // lowPercent  : Value of 1 if still low%, 0 if low% is lost
@@ -20,16 +15,11 @@
 state("NecroDancer") {}
 
 state("NecroDancer", "1.29 (Steam)") { // predlc/classic
-    int beatCounter  : 0x3BF740; 
     int charTime     : 0x3BF6C8;
     int igt          : 0x3BF6D0;   
     int seed         : 0x3BF874;
-    float xPos       : 0x3BF560;
-    float yPos       : 0x3BF64C;
-    sbyte bossIntro  : 0x3BF408; 
     sbyte charID     : 0x3BA354, 0x14, 0x100; 
     sbyte deathless  : 0x3BF945;
-    sbyte gamePaused : 0x3BF6C7; 
     sbyte level      : 0x3BF98C;
     sbyte loading    : 0x3BF6CE;
     sbyte lowPercent : 0x3BF847;
@@ -37,16 +27,11 @@ state("NecroDancer", "1.29 (Steam)") { // predlc/classic
 }
 
 state("NecroDancer", "2.59 (Steam)") { // amplified
-    int beatCounter  : 0x4359B4;
     int charTime     : 0x43593C;
     int igt          : 0x435944;
     int seed         : 0x435AF4;
-    float xPos       : 0x4358D4; 
-    float yPos       : 0x4358D8;
-    sbyte bossIntro  : 0x43557C; 
     sbyte charID     : 0x435770, 8, 4, 0x11c;
     sbyte deathless  : 0x435BBD;
-    sbyte gamePaused : 0x43596C; 
     sbyte level      : 0x435C10;
     sbyte loading    : 0x435942;
     sbyte lowPercent : 0x435AC2;
@@ -64,19 +49,15 @@ startup {
     settings.Add("lobbyReset", true, "Reset On Returning To Lobby", "autoreset");
     settings.Add("igtReset", true, "Reset When IGT Resets", "autoreset");
     settings.Add("lostLowReset", false, "Reset When Losing Low%", "autoreset");
-    settings.Add("misc", false, "Misc. Options/Settings");
-    settings.Add("bossPrac", false, "Add Auto Start/Split Conditions for Boss Practice", "misc");
-    settings.Add("beatCounter", false, "Use `Beat Counter' for Game Time", "misc");
-    settings.Add("rtaNoLoads", false, "Use `RTA No Loads' for Game Time", "misc");
 
-    settings.SetToolTip("endSplit", "Splits on a finished run for an individual character.");
-    settings.SetToolTip("zoneSplits", "Splits after changing zones/depths (e.g. would split on transition from 2-4 to 3-1).");
-    settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g would split on transition from 1-2 to 1-3).\nThis will also split for Dead Ringer or Frakensteinway if playing as Cadence or Nocturna respectively.");
-    settings.SetToolTip("igtReset", "Resets the timer when the IGT is initialized and reset (usually a quick restart in game).");
-    settings.SetToolTip("misc", "Various options/setings with (probably) niche use cases.");
-    settings.SetToolTip("bossPrac", "Starts timer on center tile of the door frame of the boss practice room,\n and splits when hitting the tile where boss gold would normally be located.\nPairs well with the option to use the beat counter for game time.");
-    settings.SetToolTip("beatCounter", "One beat is represented as ten milliseconds (0.01 seconds) in LiveSplit. Slightly buggy with non-bard characters (seems inconsistent, sometimes will start at 1 and sometimes will start at 0).");
-    settings.SetToolTip("rtaNoLoads", "Unlike the IGT, the timer will only pause when loading and not on boss intro splashes nor on a pause menu.");
+    settings.SetToolTip("splits", "Settings/conditions for when to auto split");
+    settings.SetToolTip("endSplit", "Splits on a finished run for an individual character");
+    settings.SetToolTip("zoneSplits", "Splits after changing zones/depths (e.g. would split on transition from 2-4 to 3-1)");
+    settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g would split on transition from 1-2 to 1-3)\nThis will also split for Dead Ringer or Frakensteinway if playing as Cadence or Nocturna respectively");
+    settings.SetToolTip("autoreset", "Settings/conditions for when to auto reset");
+    settings.SetToolTip("lobbyReset", "Resets the timer upon returning to the main lobby");
+    settings.SetToolTip("igtReset", "Resets the timer when the IGT is initialized and reset (usually a quick restart in game)");
+    settings.SetToolTip("lostLowReset", "Resets the timer upon losing low% in game (e.g. picking up an item or hitting a shrine)");
 }
 
 init {
@@ -88,8 +69,6 @@ init {
     else 
         version = String.Format("<unknown> (0x{0:X8})", mms);
 
-    vars.beats = 0;
-    vars.isLoading = false;
     vars.quickReset = false; 
     vars.runCounter = 0;
     vars.splits = new HashSet<string>();
@@ -98,32 +77,16 @@ init {
 update {
     if (version.Contains("<unknown>")) return false; 
 
-    vars.isLoading = (current.loading == 0);
-    if (old.beatCounter - current.beatCounter == 1 && !vars.isLoading)
-        vars.beats++;
     if (current.charTime < old.charTime && current.igt > current.charTime && current.level == 1)
         vars.runCounter++;
 }
 
 start {
-    // Normal Runs
     if (vars.quickReset || current.igt < old.igt) {
-        vars.beats = 0;
         vars.quickReset = false;
         vars.runCounter = 0;
         vars.splits.Clear();
         return true;
-    }
-
-    // Boss Practice
-    if (settings["bossPrac"] && current.level >= 12 && current.level <= 22) {
-        bool shouldStart;
-        if (current.level == 18) // ND1
-            shouldStart = (current.xPos == 24 && current.yPos == -120);
-        else 
-            shouldStart = (current.xPos == 0 && current.yPos == -144);
-        vars.beats = shouldStart ? 0 : vars.beats;
-        return shouldStart;
     }
 }
 
@@ -177,7 +140,6 @@ split {
 }
 
 reset {
-    bool bossPrac = settings["bossPrac"] && (current.level >= 12 && current.level <= 22 && current.yPos >= -120);
     bool igtReset = settings["igtReset"] && (current.igt < old.igt);
     bool lostLow = settings["lostLowReset"] && (current.lowPercent == 0 && old.lowPercent == 1);
     bool returnedToLobby = settings["lobbyReset"] && (current.zone == 1 && current.level == -2);
@@ -189,25 +151,17 @@ reset {
         seedChanged = settings["igtReset"] && (current.seed > old.seed);
 
     vars.quickReset = seedChanged;
-    return (returnedToLobby || igtReset || seedChanged || lostLow || bossPrac);
+    return (returnedToLobby || igtReset || seedChanged || lostLow);
 }
 
 isLoading {
-    if (settings["beatCounter"])
-        return true;
-    else if (settings["rtaNoLoads"])
-        return (vars.isLoading && !(current.bossIntro != 0 || current.gamePaused != 0));
-    else
-        return vars.isLoading;
+    return current.loading == 0;
 }
 
 gameTime {
-    if (settings["beatCounter"])
-        return TimeSpan.FromMilliseconds(vars.beats * 10); 
-
     // The IGT in memory only updates once every ~0.5 seconds normally, so only
     // sync the game time when the game "is loading" or when the IGT changes
-    if (!settings["rtaNoLoads"] && (vars.isLoading || current.igt != old.igt))
+    if (current.loading == 0 || current.igt != old.igt)
         return TimeSpan.FromMilliseconds(current.igt);
 }
 
