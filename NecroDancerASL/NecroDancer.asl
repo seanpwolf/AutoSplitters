@@ -53,7 +53,7 @@ startup {
     settings.SetToolTip("splits", "Settings/conditions for when to auto split");
     settings.SetToolTip("endSplit", "Splits on a finished run for an individual character");
     settings.SetToolTip("zoneSplits", "Splits after changing zones/depths (e.g. would split on transition from 2-4 to 3-1)");
-    settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g would split on transition from 1-2 to 1-3)\nThis will also split for Dead Ringer or Frakensteinway if playing as Cadence or Nocturna respectively");
+    settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g would split on transition from 1-2 to 1-3)\nThis will also split for Dead Ringer or Frankensteinway if playing as Cadence or Nocturna respectively");
     settings.SetToolTip("autoreset", "Settings/conditions for when to auto reset");
     settings.SetToolTip("lobbyReset", "Resets the timer upon returning to the main lobby");
     settings.SetToolTip("igtReset", "Resets the timer when the IGT is initialized and reset (usually a quick restart in game)");
