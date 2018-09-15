@@ -70,21 +70,16 @@ init {
         version = String.Format("<unknown> (0x{0:X8})", mms);
 
     vars.quickReset = false; 
-    vars.runCounter = 0;
     vars.splits = new HashSet<string>();
 }
 
 update {
     if (version.Contains("<unknown>")) return false; 
-
-    if (current.charTime < old.charTime && current.igt > current.charTime && current.level == 1)
-        vars.runCounter++;
 }
 
 start {
     if (vars.quickReset || current.igt < old.igt) {
         vars.quickReset = false;
-        vars.runCounter = 0;
         vars.splits.Clear();
         return true;
     }
@@ -93,7 +88,7 @@ start {
 split {
     bool shouldSplit = false;
     var lastZone = current.charID == 2 ? 1 : (version.Contains("2.59") ? 5 : 4);
-    string splitFlag = String.Format("R{0}_C{1}:Z{2}-L{3}", vars.runCounter, old.charID, old.zone, old.level);
+    string splitFlag = String.Format("S{0}_C{1}:Z{2}-L{3}", old.seed, old.charID, old.zone, old.level);
 
     if (vars.splits.Contains(splitFlag))
         return false;
