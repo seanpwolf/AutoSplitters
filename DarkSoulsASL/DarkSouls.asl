@@ -16,7 +16,7 @@ state("DARKSOULS", "Steam") {
 
     int charPtr      : 0xF7DC70, 4, 0;
     int efPtr        : 0xF7D7D4, 0;
-    int lastBonfire  : 0xF784A0, 0xB04;
+    int bonfire  : 0xF784A0, 0xB04;
 
     int igt          : 0xF78700, 0x68;
     int ngplus       : 0xF78700, 0x3C; 
@@ -213,6 +213,7 @@ startup {
     vars.igt = 0;
     vars.isLoaded = false;
     vars.justStarted = true;
+    vars.removedQuitoutDelay = true;
     vars.completedSplits = new HashSet<string>();
     vars.queuedSplits = new HashSet<string>();
 }
@@ -270,23 +271,25 @@ start {
 
     if (!(vars.igt == 0 && vars.completedSplits.Count == 0)) {
         vars.igt = 0;
+        vars.justStarted = true;
+        vars.removedQuitoutDelay = true;
         vars.completedSplits.Clear();
         vars.queuedSplits.Clear();
-        vars.justStarted = true;
-        print("[DS.ASL] start: reinitialize helpers");
+        print("[DS.ASL] start: reinitialized helpers");
     }
 
     bool shouldStart = false;
     Func<float, float, float, bool> floatEquals = (x, y, p) => (Math.Abs(x - y) <= p);
 
     if (vars.isLoaded) {
-        shouldStart = (current.worldarea == 0x1201 && current.mpzone == -2 &&
+        shouldStart = (current.worldarea == 0x1201 && 
+                       current.mpzone == 0xFFFFFFFE &&
                        floatEquals(current.xPos, -15.45f, 0.001f) && 
                        floatEquals(current.yPos, 184.70f, 0.001f) && 
                        floatEquals(current.zPos, -46.80f, 0.001f));
 
         if (shouldStart)
-            print(String.Format("[DS.ASL] shouldStart = {0}", shouldStart));
+            print(String.Format("[DS.ASL] start: shouldStart = {0}", shouldStart));
         return shouldStart;
     }
 }
@@ -316,15 +319,15 @@ reset {
                        floatEquals(current.yPos, 184.70f, 0.001f) && 
                        floatEquals(current.zPos, -46.80f, 0.001f));
 
-        if (shouldReset && !vars.justStarted)
-            print(String.Format("[DS.ASL] shouldReset = {0}", shouldReset));
-
         // "delay" auto-resets until moved from the spawn point - prevents chain
         // of auto-start --> auto-reset etc. since they share sim. conditionals
         if (vars.justStarted) 
             vars.justStarted = shouldReset;
-        else 
+        else {
+            if (shouldReset)
+                print(String.Format("[DS.ASL] reset: shouldReset = {0}", shouldReset));
             return shouldReset;
+        }
     }
 }
 
@@ -357,38 +360,38 @@ split {
         foreach (KeyValuePair<string, uint> ef in vars.eventFlagsCurrent) {
             uint efCurrent = ef.Value;
             uint efOld = vars.eventFlagsOld[ef.Key];
+            uint mask = (efCurrent > efOld) ? efCurrent ^ efOld : 0;
+            bool splitEnabled = false;
             string splitFlag = "";
+            string[] splitTypes = "OnNextLoad ExitZone LastBonfire".Split(' ');
 
-            if (efCurrent > efOld && vars.eventFlagMasks[ef.Key].TryGetValue(efCurrent ^ efOld, out splitFlag)) {
-                foreach (string s in "OnNextLoad ExitZone LastBonfire".Split(' ')) {
-                    if (!vars.completedSplits.Contains(splitFlag+s)) {
-                        print(String.Format("[DS.ASL] {0}: {1:X8} -> {2:X8} ({3:X8}, {4:X8})", splitFlag+s, efOld, efCurrent, current.mpzone, current.efPtr));
-                    }
-                    if (!vars.completedSplits.Contains(splitFlag+s) && 
-                         settings.ContainsKey(splitFlag+s) && 
-                         settings[splitFlag+s]) {
+            if (vars.eventFlagMasks[ef.Key].TryGetValue(mask, out splitFlag)) {
+                foreach (string s in splitTypes) {
+                    splitEnabled = settings.ContainsKey(splitFlag+s);
+                    splitEnabled = splitEnabled && settings[splitFlag+s];
+
+                    if (!vars.completedSplits.Contains(splitFlag+s) && splitEnabled) 
                         print(String.Format("[DS.ASL] split: added {0} to queue ({1})", splitFlag+s, vars.queuedSplits.Add(splitFlag+s)));
-                    }
                 }
             }
         }
 
         // Check queued splits and actually split if their conditions are met
-        // TODO: maybe change this to check if lastBonfire/etc. are diff first?
         foreach (string splitFlag in vars.queuedSplits) {
-            if (splitFlag.Contains("ExitZone")) {
-                if (current.mpzone != old.mpzone && old.mpzone == vars.splitFlagZones[splitFlag] && current.mpzone != 0xFFFFFFFF) {
-                    print(String.Format("[DS.ASL] split: {0}", splitFlag));
-                    return vars.completedSplits.Add(splitFlag);
-                }
-            } else if (splitFlag.Contains("LastBonfire")) {
-                if (current.lastBonfire != old.lastBonfire && current.lastBonfire == vars.splitFlagBonfires[splitFlag]) {
-                    print(String.Format("[DS.ASL] split: {0}", splitFlag));
-                    return vars.completedSplits.Add(splitFlag); 
-                }
-            }
+            if (splitFlag.Contains("ExitZone")) 
+                shouldSplit = (current.mpzone != 0xFFFFFFFF &&
+                               current.mpzone != old.mpzone && 
+                               old.mpzone == vars.splitFlagZones[splitFlag]);
+            else if (splitFlag.Contains("LastBonfire")) 
+                shouldSplit = (current.bonfire != -1 &&
+                               current.bonfire != old.bonfire && 
+                               current.bonfire == vars.splitFlagBonfires[splitFlag]);
+
+            if (shouldSplit)
+                print(String.Format("[DS.ASL] split: {0}", splitFlag));
+            return shouldSplit && vars.completedSplits.Add(splitFlag); 
         }
-    } else {
+    } else { // !vars.isLoaded
         // Check queued "OnNextLoad" splits and split 
         foreach (string splitFlag in vars.queuedSplits) {
             if (splitFlag.Contains("OnNextLoad")) {
@@ -405,13 +408,14 @@ isLoading {
 
 gameTime {
     // might need to fix time on split when splitting after a quitout*
-    if (current.igt != 0) {
+    if (current.igt > 0) {
         vars.igt = current.igt;
-        return TimeSpan.FromMilliseconds(current.igt);
-    } else if (vars.igt != 0)
-        return TimeSpan.FromMilliseconds(vars.igt-594);
-    else
-        return TimeSpan.FromMilliseconds(vars.igt);
+        vars.removedQuitoutDelay = false;
+    } else if (!vars.removedQuitoutDelay) {
+        vars.igt -= 594;
+        vars.removedQuitoutDelay = true;
+    }
+    return TimeSpan.FromMilliseconds(vars.igt);
 }
 
 // vim: set ts=4 sw=4 autoindent syntax=cs :
