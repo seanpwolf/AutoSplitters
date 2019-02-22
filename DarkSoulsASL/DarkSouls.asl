@@ -6,9 +6,6 @@ state("DARKSOULS", "Steam") {
     int charPtr : 0xF7DC70, 4, 0;
     int igt     : 0xF78700, 0x68;
     int mpzone  : 0xF7E204, 0xA14;
-    float xPos  : 0xF7DC70, 4, 0, 0x28, 0x1C, 0x10;
-    float yPos  : 0xF7DC70, 4, 0, 0x28, 0x1C, 0x14;
-    float zPos  : 0xF7DC70, 4, 0, 0x28, 0x1C, 0x18;
 }
 
 state("DARKSOULS", "Debug") {
@@ -16,41 +13,6 @@ state("DARKSOULS", "Debug") {
 }
 
 startup {
-    // --- Better Settings Sort Order? ---
-    // Asylum Demon
-    // Bells / Lord Vessel
-    //     Gargoyles
-    //     Iron Golem
-    //     Ornstein & Smough
-    //     Quelaag
-    // Darkroot
-    //     Butterfly 
-    //     Dusk
-    //     Sif
-    // Demon Ruins
-    //     Ceaseless
-    //     Demon Firesage
-    //     Centipede Demon
-    // DLC    
-    //     Sanctuary Guardian
-    //     Artorias
-    //     Kalameet
-    //     Manus
-    // Lord Souls
-    //     Bed of Chaos
-    //     Four Kings
-    //     Pinwheel
-    //     Nito
-    //     Seath
-    // Other Optional Bosses
-    //     Gwyndolin
-    //     Priscilla
-    //     Stray Demon
-    // Undead Burg / Depths
-    //     Capra
-    //     Gaping
-    //     Taurus
-
     settings.Add("eventSplits", false, "Boss/Event Split Conditions");
     settings.CurrentDefaultParent = "eventSplits";
 
@@ -101,7 +63,7 @@ startup {
     settings.Add("miscSplits", false, "Misc. Split Conditions");
     settings.CurrentDefaultParent = "miscSplits";
     settings.Add("sgsOnNextLoad", false, "Sen's Gate Skip (On Next Load)");
-    settings.Add("wwKilnOnNextLoad", false, "PCC Wrong Warp to Kiln (On Next Load)");
+    settings.Add("kilnwwOnFlagSet", false, "PCC Wrong Warp to Kiln");
 
     vars.efMasks = new Dictionary<string, Dictionary<uint, string>>() {
         {"bossMain", new Dictionary<uint, string>() {
@@ -176,38 +138,56 @@ startup {
     };
 
     vars.igt = 0;
-    vars.inStartingPos = false;
     vars.isLoaded = false;
     vars.justStarted = true;
     vars.newNGPlus = false;
     vars.removedQuitoutDelay = true;
+    vars.shouldStart = false;
     vars.completedSplits = new HashSet<string>();
     vars.queuedSplits = new HashSet<string>();
 }
 
 init {
-    int mms = modules.First().ModuleMemorySize;
-	if (mms == 0x11C2000)
-        version = "Steam";
-	else if (mms == 0x11C6000) 
-        version = "Debug";
-    else 
-        version = String.Format("<unknown> (0x{0:X8})", mms);
-    if (!version.Equals("Steam")) return;
+    if (modules.First().ModuleMemorySize != 0x11C2000) {
+        version = (modules.First().ModuleMemorySize == 0x11C6000) ? "Debug" : "<unknown>";
+        return;
+    }
+    version = "Steam";
+    IntPtr basePtr = (IntPtr) modules.First().BaseAddress;
+    IntPtr ptr = IntPtr.Zero;
 
-    IntPtr ptr = (IntPtr) modules.First().BaseAddress;
-    ptr = (IntPtr) memory.ReadValue<int>(ptr + 0xF784A0);
+    ptr = (IntPtr) memory.ReadValue<int>(basePtr + 0xF784A0);
     vars.bonfire = new MemoryWatcher<int>(ptr + 0xB04);
-    ptr = (IntPtr) modules.First().BaseAddress;
-    ptr = (IntPtr) memory.ReadValue<int>(ptr + 0xF78700);
+    ptr = (IntPtr) memory.ReadValue<int>(basePtr + 0xF78700);
     vars.ngplus = new MemoryWatcher<int>(ptr + 0x3C);
-    ptr = (IntPtr) modules.First().BaseAddress;
-    ptr = (IntPtr) memory.ReadValue<int>(ptr + 0xF7E204);
+    ptr = (IntPtr) memory.ReadValue<int>(basePtr + 0xF7D644);
+    vars.deathcam = new MemoryWatcher<byte>(ptr + 0x40);
+    ptr = (IntPtr) memory.ReadValue<int>(basePtr + 0xF7E204);
     vars.area   = new MemoryWatcher<byte>(ptr + 0xA12);
     vars.world  = new MemoryWatcher<byte>(ptr + 0xA13);
     vars.mpzone = new MemoryWatcher<int>(ptr + 0xA14);
-    ptr = (IntPtr) modules.First().BaseAddress;
-    ptr = (IntPtr) memory.ReadValue<int>(ptr + 0xF7D7D4);
+    ptr = (IntPtr) memory.ReadValue<int>(basePtr + 0xF7DC70);
+    ptr = (IntPtr) memory.ReadValue<int>(ptr + 4);
+    ptr = (IntPtr) memory.ReadValue<int>(ptr + 0);
+    ptr = (IntPtr) memory.ReadValue<int>(ptr + 0x28);
+    ptr = (IntPtr) memory.ReadValue<int>(ptr + 0x1C);
+    vars.xPos = new MemoryWatcher<float>(ptr + 0x10);
+    vars.yPos = new MemoryWatcher<float>(ptr + 0x14);
+    vars.zPos = new MemoryWatcher<float>(ptr + 0x18);
+
+    vars.watchers = new MemoryWatcherList() {
+        vars.bonfire,
+        vars.ngplus,
+        vars.world,
+        vars.area,
+        vars.mpzone,
+        vars.deathcam,
+        vars.xPos,
+        vars.yPos,
+        vars.zPos
+    };
+
+    ptr = (IntPtr) memory.ReadValue<int>(basePtr + 0xF7D7D4);
     ptr = (IntPtr) memory.ReadValue<int>(ptr + 0);
     vars.eventFlags = new MemoryWatcherList() {
         new MemoryWatcher<uint>(ptr + 0x0000) { Name = "bossMain" },
@@ -220,13 +200,6 @@ init {
         new MemoryWatcher<uint>(ptr + 0x4630) { Name = "darkAL" },
         new MemoryWatcher<uint>(ptr + 0x4670) { Name = "bossG" },
         new MemoryWatcher<uint>(ptr + 0x5A70) { Name = "bossSD" }
-    };
-    vars.watchers = new MemoryWatcherList() {
-        vars.bonfire,
-        vars.ngplus,
-        vars.world,
-        vars.area,
-        vars.mpzone
     };
     foreach (var ef in vars.eventFlags)
         ef.Current = 0xFFFFFFFF;
@@ -258,14 +231,12 @@ update {
         print("[DS.ASL] update: new NG+ reached, clearing split hashsets");
     }
 
-    if (vars.isLoaded) {
-        vars.inStartingPos = (vars.world.Current == 18 && 
-                              vars.area.Current == 1 && 
-                              vars.mpzone.Current == -2 &&
-                              floatEquals(current.xPos, -15.45f, 0.001f) && 
-                              floatEquals(current.yPos, 184.70f, 0.001f) && 
-                              floatEquals(current.zPos, -46.80f, 0.001f));
-    }
+    vars.shouldStart = (vars.world.Current == 18 && 
+                        vars.area.Current == 1 && 
+                        vars.mpzone.Current == -2 &&
+                        floatEquals(vars.xPos.Current, -15.45f, 0.001f) && 
+                        floatEquals(vars.yPos.Current, 184.70f, 0.001f) && 
+                        floatEquals(vars.zPos.Current, -46.80f, 0.001f));
 }
 
 start {
@@ -281,15 +252,9 @@ start {
         print("[DS.ASL] start: reinitialized helpers");
     }
 
-    bool shouldStart = false;
-
-    if (vars.isLoaded) {
-        shouldStart = vars.inStartingPos;
-
-        if (shouldStart)
-            print(String.Format("[DS.ASL] start: shouldStart = {0}", shouldStart));
-        return shouldStart;
-    }
+    if (vars.shouldStart)
+        print("[DS.ASL] start: starting timer...");
+    return vars.shouldStart;
 }
 
 // A better/ideal reset condition would be on deleting the first save file
@@ -297,30 +262,17 @@ start {
 reset {
     if (!version.Equals("Steam")) return false;
 
-    // Relies on auto start being active - so effectively disable auto-reset
-    // if auto-start is disabled by the user (otherwise manually started
-    // runs would be automatically reset if accidently left active)
-    //
-    // Not an ideal way to handle this, might be able to fix it (TODO)
-    //if (!settings.StartEnabled) return false;
-
-    bool shouldReset = false;
-
     // Reset if the current position is the initial spawn in asylum upon
     // creating a new character and if the current IGT is 2 seconds or less
-    if (vars.isLoaded) {
-        shouldReset = vars.inStartingPos && vars.igt <= 2000;
+    bool shouldReset = vars.shouldStart && vars.igt <= 2000;
 
-        // "delay" auto-resets until moved from the spawn point - prevents chain
-        // of auto-start --> auto-reset etc. since they share sim. conditionals
-        if (vars.justStarted) 
-            vars.justStarted = shouldReset;
-        else {
-            if (shouldReset)
-                print(String.Format("[DS.ASL] reset: shouldReset = {0}", shouldReset));
-            return shouldReset;
-        }
-    }
+    // "delay" auto-resets until moved from the spawn point - prevents chain
+    // of auto-start --> auto-reset etc. since they share sim. conditionals
+    if (vars.justStarted) 
+        vars.justStarted = shouldReset;
+    if (shouldReset)
+        print("[DS.ASL] reset: restarting timer");
+    return shouldReset;
 }
 
 split {
@@ -330,7 +282,7 @@ split {
     vars.queuedSplits.ExceptWith(vars.completedSplits);
 
     if (vars.isLoaded) {
-        // Check to see if a event flag was newly set 
+        // Queue up splits if their respective event flags are newly set
         foreach (var ef in vars.eventFlags) {
             uint mask = (ef.Current > ef.Old) ? ef.Current ^ ef.Old : (uint)0;
             bool splitEnabled = false;
@@ -338,20 +290,49 @@ split {
             string[] splitTypes = "OnNextLoad ExitZone LastBonfire".Split(' ');
 
             if (ef.Current > ef.Old)
-                print(String.Format("[DS.ASL] {0}: {1:X8} -> {2:X8}", ef.Name, ef.Old, ef.Current));
+                print(String.Format("[DS.ASL] split: {0:X8} -> {1:X8} ({2})", ef.Old, ef.Current, ef.Name));
 
             if (vars.efMasks[ef.Name].TryGetValue(mask, out splitFlag)) {
                 foreach (string s in splitTypes) {
                     splitEnabled = settings.ContainsKey(splitFlag+s);
                     splitEnabled = splitEnabled && settings[splitFlag+s];
 
-                    if (!vars.completedSplits.Contains(splitFlag+s) && splitEnabled) 
-                        print(String.Format("[DS.ASL] split: added {0} to queue ({1})", splitFlag+s, vars.queuedSplits.Add(splitFlag+s)));
+                    if (!splitEnabled)
+                        vars.completedSplits.Add(splitFlag+s);
+
+                    if (!vars.completedSplits.Contains(splitFlag+s)) {
+                        vars.queuedSplits.Add(splitFlag+s);
+                        print(String.Format("[DS.ASL] split: added {0} to queue", splitFlag+s));
+                    }
                 }
             }
         }
 
-        // Check queued splits and actually split if their conditions are met
+        // SGS
+        if (vars.mpzone.Changed && vars.mpzone.Current == 0x249F0 &&
+                vars.world.Current == 10 && vars.area.Current == 1 && 
+                vars.deathcam.Current == 1) {
+            if (!settings["sgsOnNextLoad"])
+                vars.completedSplits.Add("sgsOnNextLoad");
+
+            if (!vars.completedSplits.Contains("sgsOnNextLoad")) {
+                vars.queuedSplits.Add("sgsOnNextLoad");
+                print("[DS.ASL] split: added sgsOnNextLoad to queue");
+            }
+        }
+
+        // PCC WW to Kiln
+        if (vars.world.Old == 12 && vars.world.Current == 18 && 
+                vars.area.Changed && vars.mpzone.Changed && 
+                vars.mpzone.Current == 0x2BF20) {
+            vars.completedSplits.Add("kilnwwOnFlagSet");
+            if (settings["kilnwwOnFlagSet"]) {
+                print("[DS.ASL] split: kilnwwOnFlagSet");
+                return settings["kilnwwOnFlagSet"];
+            }
+        }
+
+        // Check and split queued splits if their conditions are met
         foreach (string splitFlag in vars.queuedSplits) {
             if (splitFlag.Contains("ExitZone")) 
                 shouldSplit = (vars.mpzone.Changed && 
@@ -365,7 +346,6 @@ split {
             return shouldSplit && vars.completedSplits.Add(splitFlag); 
         }
     } else if (current.igt != 0) { // split on loads only, not main menu
-        // Check queued "OnNextLoad" splits and split 
         foreach (string splitFlag in vars.queuedSplits) {
             if (splitFlag.Contains("OnNextLoad")) {
                 print(String.Format("[DS.ASL] split: {0}", splitFlag));
