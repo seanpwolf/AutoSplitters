@@ -60,10 +60,23 @@ startup {
     settings.Add("strayOnNextLoad", true, "Stray Demon (On Next Load)");
     settings.Add("taurusExitZone", true, "Taurus Demon (On Exiting Boss Area)");
 
+    settings.CurrentDefaultParent = null;
     settings.Add("miscSplits", false, "Misc. Split Conditions");
     settings.CurrentDefaultParent = "miscSplits";
-    settings.Add("sgsOnNextLoad", false, "Sen's Gate Skip (On Next Load)");
-    settings.Add("kilnwwOnFlagSet", false, "PCC Wrong Warp to Kiln");
+    settings.Add("sgsOnNextLoad", true, "Sen's Gate Skip (On Next Load)");
+    settings.Add("kilnwwOnFlagSet", true, "PCC Wrong Warp to Kiln");
+
+    settings.CurrentDefaultParent = null;
+    settings.Add("resetConds", false, "Auto Reset Conditions");
+    settings.CurrentDefaultParent = "resetConds";
+    settings.Add("resetNewChar", true, "Reset On Entering New Character Creation");
+    settings.Add("resetNewRun", false, "Reset if starting position is the initial spawn in Asylum");
+
+    settings.CurrentDefaultParent = null;
+    settings.Add("info", true, "=== Info ===");
+    settings.CurrentDefaultParent = "info";
+    settings.Add("info1", false, "Autosplitter for Dark Souls PTDE by seanpwolf");
+    settings.Add("info2", false, "Website: https://github.com/seanpwolf/AutoSplitters");
 
     vars.efMasks = new Dictionary<string, Dictionary<uint, string>>() {
         {"bossMain", new Dictionary<uint, string>() {
@@ -145,6 +158,7 @@ startup {
     vars.shouldStart = false;
     vars.completedSplits = new HashSet<string>();
     vars.queuedSplits = new HashSet<string>();
+    refreshRate = 30;
 }
 
 init {
@@ -153,67 +167,57 @@ init {
         return;
     }
     version = "Steam";
-    IntPtr basePtr = (IntPtr) modules.First().BaseAddress;
-    IntPtr ptr = IntPtr.Zero;
 
-    ptr = (IntPtr) memory.ReadValue<int>(basePtr + 0xF784A0);
-    vars.bonfire = new MemoryWatcher<int>(ptr + 0xB04);
-    ptr = (IntPtr) memory.ReadValue<int>(basePtr + 0xF78700);
-    vars.ngplus = new MemoryWatcher<int>(ptr + 0x3C);
-    ptr = (IntPtr) memory.ReadValue<int>(basePtr + 0xF7D644);
-    vars.deathcam = new MemoryWatcher<byte>(ptr + 0x40);
-    ptr = (IntPtr) memory.ReadValue<int>(basePtr + 0xF7E204);
-    vars.area   = new MemoryWatcher<byte>(ptr + 0xA12);
-    vars.world  = new MemoryWatcher<byte>(ptr + 0xA13);
-    vars.mpzone = new MemoryWatcher<int>(ptr + 0xA14);
-    ptr = (IntPtr) memory.ReadValue<int>(basePtr + 0xF7DC70);
-    ptr = (IntPtr) memory.ReadValue<int>(ptr + 4);
-    ptr = (IntPtr) memory.ReadValue<int>(ptr + 0);
-    ptr = (IntPtr) memory.ReadValue<int>(ptr + 0x28);
-    ptr = (IntPtr) memory.ReadValue<int>(ptr + 0x1C);
-    vars.xPos = new MemoryWatcher<float>(ptr + 0x10);
-    vars.yPos = new MemoryWatcher<float>(ptr + 0x14);
-    vars.zPos = new MemoryWatcher<float>(ptr + 0x18);
+    vars.soulLevel = new MemoryWatcher<int>(new DeepPointer("DARKSOULS.exe", 0xF78700, 0x8, 0x88));
+    vars.charName = new StringWatcher(new DeepPointer("DARKSOULS.exe", 0xF78700, 0x8, 0xA0), 16);
+
+    vars.area = new MemoryWatcher<byte>(new DeepPointer("DARKSOULS.exe", 0xF7E204, 0xA12));
+    vars.bonfire = new MemoryWatcher<int>(new DeepPointer("DARKSOULS.exe", 0xF784A0, 0xB04));
+    vars.deathcam = new MemoryWatcher<byte>(new DeepPointer("DARKSOULS.exe", 0xF7D644, 0x40));
+    vars.mpzone = new MemoryWatcher<int>(new DeepPointer("DARKSOULS.exe", 0xF7E204, 0xA14));
+    vars.ngplus = new MemoryWatcher<int>(new DeepPointer("DARKSOULS.exe", 0xF78700, 0x3C));
+    vars.world  = new MemoryWatcher<byte>(new DeepPointer("DARKSOULS.exe", 0xF7E204, 0xA13));
+    vars.xPos = new MemoryWatcher<float>(new DeepPointer("DARKSOULS.exe", 0xF7DC70, 4, 0, 0x28, 0x1C, 0x10));
+    vars.yPos = new MemoryWatcher<float>(new DeepPointer("DARKSOULS.exe", 0xF7DC70, 4, 0, 0x28, 0x1C, 0x14));
+    vars.zPos = new MemoryWatcher<float>(new DeepPointer("DARKSOULS.exe", 0xF7DC70, 4, 0, 0x28, 0x1C, 0x18));
 
     vars.watchers = new MemoryWatcherList() {
+        vars.area,
         vars.bonfire,
+        vars.deathcam,
+        vars.mpzone,
         vars.ngplus,
         vars.world,
-        vars.area,
-        vars.mpzone,
-        vars.deathcam,
         vars.xPos,
         vars.yPos,
         vars.zPos
     };
 
-    ptr = (IntPtr) memory.ReadValue<int>(basePtr + 0xF7D7D4);
-    ptr = (IntPtr) memory.ReadValue<int>(ptr + 0);
     vars.eventFlags = new MemoryWatcherList() {
-        new MemoryWatcher<uint>(ptr + 0x0000) { Name = "bossMain" },
-        new MemoryWatcher<uint>(ptr + 0x0F70) { Name = "bossBurg" },
-        new MemoryWatcher<uint>(ptr + 0x1E40) { Name = "dusk" },
-        new MemoryWatcher<uint>(ptr + 0x1E70) { Name = "bossMB" },
-        new MemoryWatcher<uint>(ptr + 0x2300) { Name = "bossDLC" },
-        new MemoryWatcher<uint>(ptr + 0x3C30) { Name = "bossDF" },
-        new MemoryWatcher<uint>(ptr + 0x3C70) { Name = "bossCD" },
-        new MemoryWatcher<uint>(ptr + 0x4630) { Name = "darkAL" },
-        new MemoryWatcher<uint>(ptr + 0x4670) { Name = "bossG" },
-        new MemoryWatcher<uint>(ptr + 0x5A70) { Name = "bossSD" }
+        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x0000)) { Name = "bossMain" },
+        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x0F70)) { Name = "bossBurg" },
+        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x1E40)) { Name = "dusk" },
+        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x1E70)) { Name = "bossMB" },
+        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x2300)) { Name = "bossDLC" },
+        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x3C30)) { Name = "bossDF" },
+        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x3C70)) { Name = "bossCD" },
+        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x4630)) { Name = "darkAL" },
+        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x4670)) { Name = "bossG" },
+        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x5A70)) { Name = "bossSD" }
     };
     foreach (var ef in vars.eventFlags)
         ef.Current = 0xFFFFFFFF;
-
-    vars.tmp = true;
 }
 
 update {
     if (version.Contains("unknown")) return false;
     if (version.Equals("Debug")) return;
-    Func<float, float, float, bool> floatEquals = (x, y, p) => (Math.Abs(x - y) <= p);
+    Func<float,float,float,bool> floatEquals = (x,y,p) => (Math.Abs(x-y) <= p);
 
     vars.isLoaded = current.charPtr != 0; 
 
+    vars.charName.Update(game);
+    vars.soulLevel.Update(game);
     if (vars.isLoaded && current.mpzone != -1) {
         vars.eventFlags.UpdateAll(game);
         vars.watchers.UpdateAll(game);
@@ -257,22 +261,34 @@ start {
     return vars.shouldStart;
 }
 
-// A better/ideal reset condition would be on deleting the first save file
-// or on creating a new character - don't have good leads for these though
 reset {
     if (!version.Equals("Steam")) return false;
 
+    // Reset when entering the character creation screen - this [appears]
+    // to be the only time that the soul level is non zero with an "" charName
+    bool shouldReset = (current.igt == 0 &&
+                        vars.soulLevel.Changed &&
+                        vars.soulLevel.Old == 0 &&
+                        vars.charName.Current.Equals(""));
+
+    if (shouldReset) {
+        print("[DS.ASL] reset: resetNewChar");
+        print(String.Format("[DS.ASL] {0}, {1} -> {2}, `{3}'", current.igt, vars.soulLevel.Old, vars.soulLevel.Current, vars.charName.Current));
+        return settings["resetNewChar"];
+    }
+
     // Reset if the current position is the initial spawn in asylum upon
     // creating a new character and if the current IGT is 2 seconds or less
-    bool shouldReset = vars.shouldStart && vars.igt <= 2000;
+    shouldReset = vars.shouldStart && vars.igt <= 2000;
 
-    // "delay" auto-resets until moved from the spawn point - prevents chain
-    // of auto-start --> auto-reset etc. since they share sim. conditionals
+    // "delay" auto resets until moved from the spawn point; prevents chain
+    // of auto start -> auto reset etc. since they share similar conditionals
     if (vars.justStarted) 
         vars.justStarted = shouldReset;
-    if (shouldReset)
-        print("[DS.ASL] reset: restarting timer");
-    return shouldReset;
+    else if (shouldReset) {
+        print("[DS.ASL] reset: resetNewRun");
+        return settings["resetNewRun"];
+    }
 }
 
 split {
