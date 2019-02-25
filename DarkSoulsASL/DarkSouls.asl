@@ -1,6 +1,5 @@
-// Huge thanks to Wulf2k (DSCM) and TKGP (DS Gadget) - most of 
-// the pointers and offsets used are sourced from their apps
 state("DARKSOULS") {}
+state("DARKSOULS", "Debug") { int igt : 0xF7C8C0, 0x68; }
 
 state("DARKSOULS", "Steam") {
     int charPtr : 0xF7DC70, 4, 0;
@@ -8,25 +7,23 @@ state("DARKSOULS", "Steam") {
     int mpzone  : 0xF7E204, 0xA14;
 }
 
-state("DARKSOULS", "Debug") {
-    int igt : 0xF7C8C0, 0x68;
-}
-
 startup {
     settings.Add("eventSplits", false, "Boss/Event Split Conditions");
+    settings.Add("miscSplits", false, "Other Split Conditions");
+    settings.Add("startConds", false, "Auto Start (on start of new playthrough)");
+    settings.Add("resetConds", false, "Auto Reset Conditions");
+    settings.Add("info", true, "=== Info ===");
     settings.CurrentDefaultParent = "eventSplits";
 
     settings.Add("artorias", true, "Artorias"); 
-        settings.Add("artoriasExitZone", true, "On Exiting Boss Area", "artorias");
-        settings.Add("artoriasOnNextLoad", false, "On Next Load", "artorias");
+        settings.Add("artoriasExitZone", false, "On Exiting Boss Area", "artorias");
+        settings.Add("artoriasOnNextLoad", true, "On Next Load", "artorias");
         settings.Add("artoriasLastBonfire", false, "On Resting At Oolacile Township Bonfire", "artorias");
     settings.Add("asylum", true, "Asylum Demon");
         settings.Add("asylumLastBonfire", false, "On Entering Firelink Shrine", "asylum");
         settings.Add("asylumOnNextLoad", true, "On Next Load", "asylum");
     settings.Add("bocOnNextLoad", true, "Bed of Chaos (On Next Load)");
-    settings.Add("capra", true, "Capra Demon");
-        settings.Add("capraExitZone", false, "On Exiting Boss Area", "capra");
-        settings.Add("capraOnNextLoad", true, "On Next Load", "capra");
+    settings.Add("capraOnNextLoad", true, "Capra Demon (On Next Load)");
     settings.Add("ceaselessOnNextLoad", true, "Ceaseless Discharge (On Next Load)");
     settings.Add("centipedeExitZone", true, "Centipede Demon (On Exiting Boss Area)"); 
     settings.Add("firesageExitZone", true, "Demon Firesage (On Exiting Boss Area)"); 
@@ -49,9 +46,8 @@ startup {
         settings.Add("priscillaExitZone", false, "On Exiting Painted World", "priscilla");
         settings.Add("priscillaOnNextLoad", true, "On Next Load", "priscilla");
     settings.Add("quelaag", true, "Quelaag"); 
-        settings.Add("quelaagExitZone", false, "On Exiting Boss Area", "quelaag");
         settings.Add("quelaagOnNextLoad", true, "On Next Load", "quelaag");
-        settings.Add("quelaagLastBonfire", false, "On Resting At Daughter of Chaos Bonfire", "quelaag");
+        settings.Add("quelaagLastBonfire", false, "On Resting At Demon Ruins Bonfire", "quelaag");
     settings.Add("sguardian", true, "Sanctuary Guardian"); 
         settings.Add("sguardianExitZone", true, "On Exiting Boss Area", "sguardian");
         settings.Add("sguardianLastBonfire", false, "On Resting At Oolacile Sanctuary Bonfire", "sguardian");
@@ -60,23 +56,18 @@ startup {
     settings.Add("strayOnNextLoad", true, "Stray Demon (On Next Load)");
     settings.Add("taurusExitZone", true, "Taurus Demon (On Exiting Boss Area)");
 
-    settings.CurrentDefaultParent = null;
-    settings.Add("miscSplits", false, "Misc. Split Conditions");
     settings.CurrentDefaultParent = "miscSplits";
     settings.Add("sgsOnNextLoad", true, "Sen's Gate Skip (On Next Load)");
     settings.Add("kilnwwOnFlagSet", true, "PCC Wrong Warp to Kiln");
 
-    settings.CurrentDefaultParent = null;
-    settings.Add("resetConds", false, "Auto Reset Conditions");
     settings.CurrentDefaultParent = "resetConds";
-    settings.Add("resetNewChar", true, "Reset On Entering New Character Creation");
-    settings.Add("resetNewRun", false, "Reset if starting position is the initial spawn in Asylum");
+    settings.Add("resetNewChar", false, "Reset on entering new character creation screen");
+    settings.Add("resetNewRun", true, "Reset if starting position is the initial spawn in Asylum");
 
-    settings.CurrentDefaultParent = null;
-    settings.Add("info", true, "=== Info ===");
     settings.CurrentDefaultParent = "info";
     settings.Add("info1", false, "Autosplitter for Dark Souls PTDE by seanpwolf");
-    settings.Add("info2", false, "Website: https://github.com/seanpwolf/AutoSplitters");
+    settings.Add("info2", false, "Official Steam version is supported, debug/beta versions are not");
+    settings.Add("info3", false, "Website: https://github.com/seanpwolf/AutoSplitters");
 
     vars.efMasks = new Dictionary<string, Dictionary<uint, string>>() {
         {"bossMain", new Dictionary<uint, string>() {
@@ -146,7 +137,8 @@ startup {
     vars.splitFlagBonfires = new Dictionary<string, int>() {
         {"asylumLastBonfire",    1022960}, 
         {"artoriasLastBonfire",  1212962},
-        {"quelaagLastBonfire",   1402960},
+        //{"quelaagLastBonfire",   1402960}, // DoC
+        {"quelaagLastBonfire",   1412961}, // Demon Ruins
         {"sguardianLastBonfire", 1212961}
     };
 
@@ -258,7 +250,7 @@ start {
 
     if (vars.shouldStart)
         print("[DS.ASL] start: starting timer...");
-    return vars.shouldStart;
+    return vars.shouldStart && settings["startConds"];
 }
 
 reset {
