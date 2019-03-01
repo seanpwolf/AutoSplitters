@@ -1,48 +1,49 @@
-# Dark Souls Auto Splitter
+# Dark Souls: Prepare to Die Edition Auto Splitter
 
-A LiveSplit auto splitter and IGT plugin for Dark Souls: PTDE (original, not remaster).
+A [LiveSplit](http://livesplit.org) auto splitter for **Dark Souls: PTDE** (in the form of an [ASL script](https://github.com/LiveSplit/LiveSplit/blob/master/Documentation/Auto-Splitters.md)).
 
-## Install
-### Auto (via splits editor)
-Probably never, due to a lack of community interest.
+### Supported Versions
 
-### Manual (via layout component)
-You can manually add the auto splitter by [downloading the script](https://raw.githubusercontent.com/seanpwolf/AutoSplitters/master/DarkSoulsASL/DarkSouls.asl), adding a "Scriptable Auto Splitter" to your LiveSplit layout (+ button -> Control -> "Scriptable Auto Splitter", and then selecting the script in the layout settings ("Scriptable Auto Splitter" tab). Your settings will be stored in your layout file.
+* Current official Steam version (IGT and auto reset/start/split features)
+* Debug version (only IGT)
 
-## Usage
+No other versions are officially supported (including the Steam beta branch and any unofficial builds)
 
-You will still have to manually start and reset runs, as well as manually split if there isn't a sufficient auto split condition for one or more of your splits. Otherwise, you can use as many or as few auto splits conditions as you want to.
+## Features
 
-Make sure to switch to game time in LiveSplit to have the timer sync with the IGT in Dark Souls (right click on LiveSplit -> Compare Against -> Game Time).
+* Automatically start the timer when beginning a new run (when the character's position is the initial spawn in the Asylum)
+* Automatically reset the timer when beginning a new run (like the auto start condition) or when entering the new character creation screen 
+* Automatically split on boss/event flags being set (like defeating a boss or turning Anor Londo dark) - with appropriate split timings for each boss/event (such as on the next load screen or upon exiting the boss area)
 
-Most of the auto split conditions work by either splitting immediately as a certain game flag is set, or by splitting on the next load screen (or the first load screen after reloading the save file in the event of a save and quit) after a certain game flag is set. You can hover over some auto split settings to show a tooltip with more detailed info.
+Note: these features are user configurable - many auto start/split/reset conditions can be individually turned on or off if desired
 
-### Settings
+## Install & Usage
 
-You can configure the settings of the auto splitter in the "Scriptable Auto Splitter" tab of your layout settings. Some default settings are already in place.
+Manually add the auto splitter by [downloading the script](/DarkSoulsASL/DarkSouls.asl?raw=true) and adding a "Scriptable Auto Splitter" to your LiveSplit layout. In detail:
 
-![Settings Example](http://i.imgur.com/AN1GyiX.png)
+1. Open LiveSplit, right click on it, select "Edit Layout..."
+1. In the Layout Editor, click the ![](/NecroDancerASL/resources/layout_editor_plus.png?raw=true "plus button"), select "Control --> Scriptable Auto Splitter"
+1. Select "Layout Settings", click on the "Scriptable Auto Splitter" tab
+1. Browse and select the "DarkSouls.asl" file downloaded earlier
 
-The current default settings are a work in progress, and are based on what appears to be the popular split locations for various bosses/events. It is likely that these will change later if these choices aren't popular defaults.
+![](/NecroDancerASL/resources/layout_editor.png?raw=true "Adding Scriptable Auto Splitter Component") ![](/NecroDancerASL/resources/layout_settings.png?raw=true "ASL Script Settings") 
 
-Note that unchecking a parent setting will disable all child settings (even if they are checked) - they should be grayed out in the UI.
+If the DarkSouls game process is detected while setting this up, LiveSplit should display the game version detected underneath the "browse..." button, as shown in the example screenshots (so you can verify the script is working). From here, you can configure the settings of the auto splitter to your liking - note that the settings will be saved in your layout file.
 
-Make sure to save your layout file if you edit the settings as they are stored there.
+Make sure to also switch to game time in LiveSplit to have the timer sync with the IGT in Dark Souls (right click on LiveSplit -> Compare Against -> Game Time).
 
-## Compatibility
+## Known Issues
 
-* Current Steam version: auto splitter and IGT
-* Debug build: only IGT (minimally tested)
+* The "auto reset on entering new character creation screen" condition has triggered incorrectly - this is probably a niche timing issue as it hasn't popped up more than once in testing (and it may already be fixed from switching to a lower script refresh rate)
 
-No other versions of the game are currently supported. You can check the auto splitter settings for which version the script detected ("steam", "debug", or "&lt;unknown&gt;" are the possible options). If the version detected is "&lt;unknown&gt;", then either your game version wasn't detected properly or your version isn't supported by this script.
+## Credits / Special Thanks
 
-## Todo:
+* Phokz ([Cheat Engine Table](http://fearlessrevolution.com/viewtopic.php?f=4&t=63)), Wulf2k ([DSCM](https://github.com/Wulf2k/DaS-PC-MPChan)), TKGP ([DS Gadget](https://github.com/JKAnderson/DS-Gadget)), and others who contributed to these projects - many of the pointers and offsets used were sourced from these projects which aided me in speed (from not having to hunt down pointers/offsets) or in finding extra similar pointers and offsets
+* SpeedSouls Community - for (indirectly) helping me with Dark Souls speed stuff
+* 0Seren, Souzooka, and Spiraster - for some of their auto splitters that served as general inspiration when it came to style/format of this auto splitter
 
-* Clean up code and documentation (including this file)
-* Update auto split conditions and their defaults to be more relevant with recent routes/discoveries
-* Make a LiveSplit component variant? (might have better performance?)
+## Contact
 
-## Credits
-
-* Wulf2k and others who contributed to [DSCM](https://github.com/Wulf2k/DaS-PC-MPChan) - many of the pointers and offsets used were derived from its source 
-
+* Discord: seanpwolf#0985
+* [Twitch](https://twitch.tv/seanpwolf)
+* [Twitter](https://twitter.com/seanpwolf)
