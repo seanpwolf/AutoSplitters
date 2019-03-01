@@ -13,8 +13,8 @@ startup {
     settings.Add("startConds", false, "Auto Start (on start of new playthrough)");
     settings.Add("resetConds", false, "Auto Reset Conditions");
     settings.Add("info", true, "=== Info ===");
+    
     settings.CurrentDefaultParent = "eventSplits";
-
     settings.Add("artorias", true, "Artorias"); 
         settings.Add("artoriasExitZone", false, "On Exiting Boss Area", "artorias");
         settings.Add("artoriasOnNextLoad", true, "On Next Load", "artorias");
@@ -375,5 +375,3 @@ gameTime {
     }
     return TimeSpan.FromMilliseconds(vars.igt);
 }
-
-// vim: set ts=4 sw=4 autoindent syntax=cs :

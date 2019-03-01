@@ -187,5 +187,3 @@ gameTime {
     if (!settings["customGameTime"] && (current.loading == 0 || current.igt != old.igt))
         return TimeSpan.FromMilliseconds(current.igt);
 }
-
-// vim: set ts=4 sw=4 autoindent syntax=cs :
