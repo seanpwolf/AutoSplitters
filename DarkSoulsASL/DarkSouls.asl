@@ -8,58 +8,58 @@ startup {
     settings.Add("info", true, "=== Info ===");
     
     settings.CurrentDefaultParent = "eventSplits";
-    settings.Add("artorias", true, "Artorias"); 
-        settings.Add("artoriasExitZone", false, "On Exiting Boss Area", "artorias");
-        settings.Add("artoriasOnNextLoad", true, "On Next Load", "artorias");
-        settings.Add("artoriasLastBonfire", false, "On Resting At Oolacile Township Bonfire", "artorias");
-    settings.Add("asylum", true, "Asylum Demon");
-        settings.Add("asylumLastBonfire", false, "On Entering Firelink Shrine", "asylum");
-        settings.Add("asylumOnNextLoad", true, "On Next Load", "asylum");
-    settings.Add("bocOnNextLoad", true, "Bed of Chaos (On Next Load)");
-    settings.Add("capraOnNextLoad", true, "Capra Demon (On Next Load)");
-    settings.Add("ceaselessOnNextLoad", true, "Ceaseless Discharge (On Next Load)");
-    settings.Add("centipedeExitZone", true, "Centipede Demon (On Exiting Boss Area)"); 
-    settings.Add("firesageExitZone", true, "Demon Firesage (On Exiting Boss Area)"); 
-    settings.Add("duskOnNextLoad", true, "Dusk Freed (On Next Load)");
-    settings.Add("fourkingsOnNextLoad", true, "Four Kings (On Next Load)");
-    settings.Add("gapingOnNextLoad", true, "Gaping Dragon (On Next Load)");
-    settings.Add("gargsOnNextLoad", true, "Gargoyles (On Next Load)");
-    settings.Add("golemExitZone", true, "Iron Golem (On Entering Anor Londo)"); 
-    settings.Add("gwynOnNextLoad", true, "Gwyn (On Credits)");
-    settings.Add("gwyndolinOnNextLoad", true, "Gwyndolin (On Next Load)");
-    settings.Add("kalameetOnNextLoad", true, "Kalameet (On Next Load)");
-    settings.Add("manusOnNextLoad", true, "Manus (On Next Load)");
-    settings.Add("butterflyOnNextLoad", true, "Moonlight Butterfly (On Next Load)");
-    settings.Add("nitoOnNextLoad", true, "Nito (On Next Load)");
-    settings.Add("ons", true, "Ornstein & Smough"); 
-        settings.Add("onsOnNextLoad", false, "On Next Load", "ons");
-        settings.Add("darkALOnNextLoad", true, "On Next Load After Turning Anor Londo Dark", "ons");
-    settings.Add("pinwheelExitZone", true, "Pinwheel (On Exiting Boss Area)");
-    settings.Add("priscilla", true, "Priscilla");
-        settings.Add("priscillaExitZone", false, "On Exiting Painted World", "priscilla");
-        settings.Add("priscillaOnNextLoad", true, "On Next Load", "priscilla");
-    settings.Add("quelaag", true, "Quelaag"); 
-        settings.Add("quelaagOnNextLoad", true, "On Next Load", "quelaag");
-        settings.Add("quelaagLastBonfire", false, "On Resting At Demon Ruins Bonfire", "quelaag");
-    settings.Add("sguardian", true, "Sanctuary Guardian"); 
-        settings.Add("sguardianExitZone", true, "On Exiting Boss Area", "sguardian");
-        settings.Add("sguardianLastBonfire", false, "On Resting At Oolacile Sanctuary Bonfire", "sguardian");
-    settings.Add("seathOnNextLoad", true, "Seath (On Next Load)");
-    settings.Add("sifOnNextLoad", true, "Sif (On Next Load)");
-    settings.Add("strayOnNextLoad", true, "Stray Demon (On Next Load)");
-    settings.Add("taurusExitZone", true, "Taurus Demon (On Exiting Boss Area)");
+        settings.Add("artorias", true, "Artorias"); 
+            settings.Add("artoriasExitZone", false, "On Exiting Boss Area", "artorias");
+            settings.Add("artoriasOnNextLoad", true, "On Next Load", "artorias");
+            settings.Add("artoriasLastBonfire", false, "On Resting At Oolacile Township Bonfire", "artorias");
+        settings.Add("asylum", true, "Asylum Demon");
+            settings.Add("asylumLastBonfire", false, "On Entering Firelink Shrine", "asylum");
+            settings.Add("asylumOnNextLoad", true, "On Next Load", "asylum");
+        settings.Add("bocOnNextLoad", true, "Bed of Chaos (On Next Load)");
+        settings.Add("capraOnNextLoad", true, "Capra Demon (On Next Load)");
+        settings.Add("ceaselessOnNextLoad", true, "Ceaseless Discharge (On Next Load)");
+        settings.Add("centipedeExitZone", true, "Centipede Demon (On Exiting Boss Area)"); 
+        settings.Add("firesageExitZone", true, "Demon Firesage (On Exiting Boss Area)"); 
+        settings.Add("duskOnNextLoad", true, "Dusk Freed (On Next Load)");
+        settings.Add("fourkingsOnNextLoad", true, "Four Kings (On Next Load)");
+        settings.Add("gapingOnNextLoad", true, "Gaping Dragon (On Next Load)");
+        settings.Add("gargsOnNextLoad", true, "Gargoyles (On Next Load)");
+        settings.Add("golemExitZone", true, "Iron Golem (On Entering Anor Londo)"); 
+        settings.Add("gwynOnNextLoad", true, "Gwyn (On Credits)");
+        settings.Add("gwyndolinOnNextLoad", true, "Gwyndolin (On Next Load)");
+        settings.Add("kalameetOnNextLoad", true, "Kalameet (On Next Load)");
+        settings.Add("manusOnNextLoad", true, "Manus (On Next Load)");
+        settings.Add("butterflyOnNextLoad", true, "Moonlight Butterfly (On Next Load)");
+        settings.Add("nitoOnNextLoad", true, "Nito (On Next Load)");
+        settings.Add("ons", true, "Ornstein & Smough"); 
+            settings.Add("onsOnNextLoad", false, "On Next Load", "ons");
+            settings.Add("darkALOnNextLoad", true, "On Next Load After Turning Anor Londo Dark", "ons");
+        settings.Add("pinwheelExitZone", true, "Pinwheel (On Exiting Boss Area)");
+        settings.Add("priscilla", true, "Priscilla");
+            settings.Add("priscillaExitZone", false, "On Exiting Painted World", "priscilla");
+            settings.Add("priscillaOnNextLoad", true, "On Next Load", "priscilla");
+        settings.Add("quelaag", true, "Quelaag"); 
+            settings.Add("quelaagOnNextLoad", true, "On Next Load", "quelaag");
+            settings.Add("quelaagLastBonfire", false, "On Resting At Demon Ruins Bonfire", "quelaag");
+        settings.Add("sguardian", true, "Sanctuary Guardian"); 
+            settings.Add("sguardianExitZone", true, "On Exiting Boss Area", "sguardian");
+            settings.Add("sguardianLastBonfire", false, "On Resting At Oolacile Sanctuary Bonfire", "sguardian");
+        settings.Add("seathOnNextLoad", true, "Seath (On Next Load)");
+        settings.Add("sifOnNextLoad", true, "Sif (On Next Load)");
+        settings.Add("strayOnNextLoad", true, "Stray Demon (On Next Load)");
+        settings.Add("taurusExitZone", true, "Taurus Demon (On Exiting Boss Area)");
 
     settings.CurrentDefaultParent = "miscSplits";
-    settings.Add("sgsOnNextLoad", true, "Sen's Gate Skip (On Next Load)");
-    settings.Add("kilnwwOnFlagSet", true, "PCC Wrong Warp to Kiln");
+        settings.Add("sgsOnNextLoad", true, "Sen's Gate Skip (On Next Load)");
+        settings.Add("kilnwwOnFlagSet", true, "PCC Wrong Warp to Kiln");
 
     settings.CurrentDefaultParent = "resetConds";
-    settings.Add("resetNewChar", false, "Reset on entering new character creation screen");
-    settings.Add("resetNewRun", true, "Reset if starting position is the initial spawn in Asylum");
+        settings.Add("resetNewChar", false, "Reset on entering new character creation screen");
+        settings.Add("resetNewRun", true, "Reset if starting position is the initial spawn in Asylum");
 
     settings.CurrentDefaultParent = "info";
-    settings.Add("info1", false, "Auto splitter for Dark Souls PTDE by seanpwolf");
-    settings.Add("info2", false, "Website: https://github.com/seanpwolf/AutoSplitters");
+        settings.Add("info1", false, "Auto splitter for Dark Souls PTDE by seanpwolf");
+        settings.Add("info2", false, "Website: https://github.com/seanpwolf/AutoSplitters");
 
     vars.efMasks = new Dictionary<string, Dictionary<uint, string>>() {
         {"bossMain", new Dictionary<uint, string>() {
@@ -143,14 +143,6 @@ startup {
     vars.completedSplits = new HashSet<string>();
     vars.queuedSplits = new HashSet<string>();
 
-    // AOB Testing - if they're here they work on both Steam and Debug
-    //
-    // charData   (F78700) AOB --> "A1 ?? ?? ?? ?? 8B 40 34 53 32"
-    // charLoaded (F7DC70) AOB --> "A1 ?? ?? ?? ?? 8B 48 04 8B 40 08 53"
-    // deathcam   (F7D644) AOB --> "A1 ?? ?? ?? ?? 39 48 3C 0F 94"
-    // eventFlag  (F7D7D4) AOB --> "A1 ?? ?? ?? ?? 53 55 56 8B F1 33 ED"
-    // worldArea  (F7E204) AOB --> "A1 ?? ?? ?? ?? 53 55 56 8B B0"
-    // worldState (F784A0) AOB --> "83 EC 0C A1 ?? ?? ?? ?? 80 B8"
     vars.charDataTarget   = new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 40 34 53 32");
     vars.charLoadedTarget = new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 48 04 8B 40 08 53");
     vars.deathcamTarget   = new SigScanTarget(1, "A1 ?? ?? ?? ?? 39 48 3C 0F 94");
@@ -169,7 +161,6 @@ init {
         return;
     }
 
-    print("[DS.ASL] Scanning for memory addresses...");
     var scanner = new SignatureScanner(game, modules.First().BaseAddress, modules.First().ModuleMemorySize);
     int charDataPtr   = (int) scanner.Scan(vars.charDataTarget);
     int charLoadedPtr = (int) scanner.Scan(vars.charLoadedTarget);
@@ -190,7 +181,6 @@ init {
         throw new Exception("[DS.ASL] Failed to find all memory addresses.");
     }
 
-    print("[DS.ASL] Reading pointer values...");
     charDataPtr   = memory.ReadValue<int>((IntPtr)charDataPtr)   - (int)modules.First().BaseAddress;
     charLoadedPtr = memory.ReadValue<int>((IntPtr)charLoadedPtr) - (int)modules.First().BaseAddress;
     deathcamPtr   = memory.ReadValue<int>((IntPtr)deathcamPtr)   - (int)modules.First().BaseAddress;
@@ -210,7 +200,6 @@ init {
         vars.count++;
         throw new Exception("[DS.ASL] Failed to read all pointers.");
     }
-    print("[DS.ASL] Scanning done.");
 
     // Check against known versions (for informational/debugging purposes)
     if (modules.First().ModuleMemorySize == 0x11C2000)
@@ -292,11 +281,8 @@ update {
         vars.soulLevel.Update(game);
     }
 
-    if (vars.ngplus.Changed) {
+    if (vars.ngplus.Changed)
         vars.newNGPlus = true;
-        print(String.Format("[DS.ASL] ngplus: {0} -> {1} ({2})", vars.ngplus.Old, vars.ngplus.Current, vars.ngplus.Changed));
-    }
-
     if (vars.newNGPlus && vars.world.Current == 18 && vars.area.Current == 1) {
         vars.newNGPlus = false;
         vars.completedSplits.Clear();
@@ -338,7 +324,7 @@ reset {
 
     if (shouldReset) {
         print("[DS.ASL] reset: resetNewChar");
-        print(String.Format("[DS.ASL] {0}, {1} -> {2}, `{3}'", current.igt, vars.soulLevel.Old, vars.soulLevel.Current, vars.charName.Current));
+        print(String.Format("\t[DS.ASL] {0}, {1} -> {2}, `{3}'", current.igt, vars.soulLevel.Old, vars.soulLevel.Current, vars.charName.Current));
         return settings["resetNewChar"];
     }
 
@@ -367,9 +353,6 @@ split {
             bool splitEnabled = false;
             string splitFlag = "";
             string[] splitTypes = "OnNextLoad ExitZone LastBonfire".Split(' ');
-
-            //if (ef.Current > ef.Old)
-                //print(String.Format("[DS.ASL] split: {0:X8} -> {1:X8} ({2})", ef.Old, ef.Current, ef.Name));
 
             if (vars.efMasks[ef.Name].TryGetValue(mask, out splitFlag)) {
                 foreach (string s in splitTypes) {

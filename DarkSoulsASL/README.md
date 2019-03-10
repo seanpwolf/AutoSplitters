@@ -2,13 +2,6 @@
 
 A [LiveSplit](http://livesplit.org) auto splitter for **Dark Souls: PTDE** (in the form of an [ASL script](https://github.com/LiveSplit/LiveSplit/blob/master/Documentation/Auto-Splitters.md)).
 
-### Supported Versions
-
-* Current official Steam version (IGT and auto reset/start/split features)
-* Debug version (only IGT)
-
-No other versions are officially supported (including the Steam beta branch and any unofficial builds)
-
 ## Features
 
 * Automatically start the timer when beginning a new run (when the character's position is the initial spawn in the Asylum)
@@ -22,11 +15,11 @@ Note: these features are user configurable - many auto start/split/reset conditi
 Manually add the auto splitter by [downloading the script](/DarkSoulsASL/DarkSouls.asl?raw=true) and adding a "Scriptable Auto Splitter" to your LiveSplit layout. In detail:
 
 1. Open LiveSplit, right click on it, select "Edit Layout..."
-1. In the Layout Editor, click the ![](/NecroDancerASL/resources/layout_editor_plus.png?raw=true "plus button"), select "Control --> Scriptable Auto Splitter"
+1. In the Layout Editor, click the ![](/DarkSoulsASL/resources/layout_editor_plus.png?raw=true "plus button"), select "Control --> Scriptable Auto Splitter"
 1. Select "Layout Settings", click on the "Scriptable Auto Splitter" tab
 1. Browse and select the "DarkSouls.asl" file downloaded earlier
 
-![](/NecroDancerASL/resources/layout_editor.png?raw=true "Adding Scriptable Auto Splitter Component") ![](/NecroDancerASL/resources/layout_settings.png?raw=true "ASL Script Settings") 
+![](/DarkSoulsASL/resources/layout_editor.png?raw=true "Adding Scriptable Auto Splitter Component") ![](/DarkSoulsASL/resources/layout_settings.png?raw=true "ASL Script Settings") 
 
 If the DarkSouls game process is detected while setting this up, LiveSplit should display the game version detected underneath the "browse..." button, as shown in the example screenshots (so you can verify the script is working). From here, you can configure the settings of the auto splitter to your liking - note that the settings will be saved in your layout file.
 
