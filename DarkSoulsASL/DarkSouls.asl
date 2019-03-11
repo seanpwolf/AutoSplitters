@@ -1,4 +1,4 @@
-state("DARKSOULS") {}
+state("DARKSOULS") {} 
 
 startup {
     settings.Add("eventSplits", false, "Boss/Event Split Conditions");
@@ -155,12 +155,18 @@ startup {
 }
 
 init {
+    if (!game.MainWindowTitle.Contains("DARK SOULS")) {
+        print("[DS.ASL] Window title doesn't contain 'DARK SOULS', assuming version is invalid.");
+        version = "invalid";
+        return;
+    }
     if (vars.count > 9) {
         print("[DS.ASL] Failed to sigscan 10 times, assuming version is invalid.");
         version = "invalid";
         return;
     }
 
+    string procName = game.ProcessName + ".exe";
     var scanner = new SignatureScanner(game, modules.First().BaseAddress, modules.First().ModuleMemorySize);
     int charDataPtr   = (int) scanner.Scan(vars.charDataTarget);
     int charLoadedPtr = (int) scanner.Scan(vars.charLoadedTarget);
@@ -176,7 +182,7 @@ init {
         worldAreaPtr,
         worldStatePtr
     };
-    if (pointers.Any(ptr => (IntPtr)ptr == IntPtr.Zero)) {
+    if (pointers.Any(ptr => ptr == 0)) {
         vars.count++;
         throw new Exception("[DS.ASL] Failed to find all memory addresses.");
     }
@@ -187,19 +193,6 @@ init {
     eventFlagPtr  = memory.ReadValue<int>((IntPtr)eventFlagPtr)  - (int)modules.First().BaseAddress;
     worldAreaPtr  = memory.ReadValue<int>((IntPtr)worldAreaPtr)  - (int)modules.First().BaseAddress;
     worldStatePtr = memory.ReadValue<int>((IntPtr)worldStatePtr) - (int)modules.First().BaseAddress;
-    // This second set of ptr == Zero checks may be unnecessary?
-    pointers = new int[] {
-        charDataPtr,
-        charLoadedPtr,
-        deathcamPtr,
-        eventFlagPtr,
-        worldAreaPtr,
-        worldStatePtr
-    };
-    if (pointers.Any(ptr => (IntPtr)ptr == IntPtr.Zero)) {
-        vars.count++;
-        throw new Exception("[DS.ASL] Failed to read all pointers.");
-    }
 
     // Check against known versions (for informational/debugging purposes)
     if (modules.First().ModuleMemorySize == 0x11C2000)
@@ -212,24 +205,24 @@ init {
         version = "Unknown (PTDE)";
 
     // Updated every script iteration, so no MemoryWatchers needed
-    vars.charLoadedPtr = new DeepPointer("DARKSOULS.exe", charLoadedPtr, 4, 0);
-    vars.igtPtr        = new DeepPointer("DARKSOULS.exe", charDataPtr, 0x68);
-    vars.mpzonePtr     = new DeepPointer("DARKSOULS.exe", worldAreaPtr, 0xA14);
+    vars.charLoadedPtr = new DeepPointer(procName, charLoadedPtr, 4, 0);
+    vars.igtPtr        = new DeepPointer(procName, charDataPtr, 0x68);
+    vars.mpzonePtr     = new DeepPointer(procName, worldAreaPtr, 0xA14);
 
     // Updated when the game is not loaded (these are used for an auto reset condition)
-    vars.charName  = new StringWatcher(new DeepPointer("DARKSOULS.exe", charDataPtr, 0x8, 0xA0), 16);
-    vars.soulLevel = new MemoryWatcher<int>(new DeepPointer("DARKSOULS.exe", charDataPtr, 0x8, 0x88));
+    vars.charName  = new StringWatcher(new DeepPointer(procName, charDataPtr, 0x8, 0xA0), 16);
+    vars.soulLevel = new MemoryWatcher<int>(new DeepPointer(procName, charDataPtr, 0x8, 0x88));
 
     // Updated when the game is loaded (values are irrelevant when game isn't loaded)
-    vars.ngplus    = new MemoryWatcher<int>(new DeepPointer("DARKSOULS.exe", charDataPtr, 0x3C));
-    vars.deathcam  = new MemoryWatcher<byte>(new DeepPointer("DARKSOULS.exe", deathcamPtr, 0x40));
-    vars.area      = new MemoryWatcher<byte>(new DeepPointer("DARKSOULS.exe", worldAreaPtr, 0xA12));
-    vars.mpzone    = new MemoryWatcher<int>(new DeepPointer("DARKSOULS.exe", worldAreaPtr, 0xA14));
-    vars.world     = new MemoryWatcher<byte>(new DeepPointer("DARKSOULS.exe", worldAreaPtr, 0xA13));
-    vars.bonfire   = new MemoryWatcher<int>(new DeepPointer("DARKSOULS.exe", worldStatePtr, 0xB04));
-    vars.xPos      = new MemoryWatcher<float>(new DeepPointer("DARKSOULS.exe", worldStatePtr, 0xB70));
-    vars.yPos      = new MemoryWatcher<float>(new DeepPointer("DARKSOULS.exe", worldStatePtr, 0xB74));
-    vars.zPos      = new MemoryWatcher<float>(new DeepPointer("DARKSOULS.exe", worldStatePtr, 0xB78));
+    vars.ngplus    = new MemoryWatcher<int>(new DeepPointer(procName, charDataPtr, 0x3C));
+    vars.deathcam  = new MemoryWatcher<byte>(new DeepPointer(procName, deathcamPtr, 0x40));
+    vars.area      = new MemoryWatcher<byte>(new DeepPointer(procName, worldAreaPtr, 0xA12));
+    vars.mpzone    = new MemoryWatcher<int>(new DeepPointer(procName, worldAreaPtr, 0xA14));
+    vars.world     = new MemoryWatcher<byte>(new DeepPointer(procName, worldAreaPtr, 0xA13));
+    vars.bonfire   = new MemoryWatcher<int>(new DeepPointer(procName, worldStatePtr, 0xB04));
+    vars.xPos      = new MemoryWatcher<float>(new DeepPointer(procName, worldStatePtr, 0xB70));
+    vars.yPos      = new MemoryWatcher<float>(new DeepPointer(procName, worldStatePtr, 0xB74));
+    vars.zPos      = new MemoryWatcher<float>(new DeepPointer(procName, worldStatePtr, 0xB78));
 
     vars.watchers = new MemoryWatcherList() {
         vars.ngplus,
@@ -245,16 +238,16 @@ init {
 
     // Also updated when game is loaded (separated so all event flag watchers can be iterated over separately)
     vars.eventFlags = new MemoryWatcherList() {
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", eventFlagPtr, 0, 0x0000)) { Name = "bossMain" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", eventFlagPtr, 0, 0x0F70)) { Name = "bossBurg" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", eventFlagPtr, 0, 0x1E40)) { Name = "dusk" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", eventFlagPtr, 0, 0x1E70)) { Name = "bossMB" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", eventFlagPtr, 0, 0x2300)) { Name = "bossDLC" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", eventFlagPtr, 0, 0x3C30)) { Name = "bossDF" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", eventFlagPtr, 0, 0x3C70)) { Name = "bossCD" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", eventFlagPtr, 0, 0x4630)) { Name = "darkAL" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", eventFlagPtr, 0, 0x4670)) { Name = "bossG" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", eventFlagPtr, 0, 0x5A70)) { Name = "bossSD" }
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x0000)) { Name = "bossMain" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x0F70)) { Name = "bossBurg" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x1E40)) { Name = "dusk" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x1E70)) { Name = "bossMB" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x2300)) { Name = "bossDLC" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x3C30)) { Name = "bossDF" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x3C70)) { Name = "bossCD" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x4630)) { Name = "darkAL" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x4670)) { Name = "bossG" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x5A70)) { Name = "bossSD" }
     };
     foreach (var ef in vars.eventFlags)
         ef.Current = 0xFFFFFFFF;

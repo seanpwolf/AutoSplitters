@@ -2,6 +2,10 @@
 
 A [LiveSplit](http://livesplit.org) auto splitter for **Dark Souls: PTDE** (in the form of an [ASL script](https://github.com/LiveSplit/LiveSplit/blob/master/Documentation/Auto-Splitters.md)).
 
+### Supported Versions
+
+Most of the testing was done on the current official Steam version, however any Steamworks based versions should work. Any GFWL based versions of the game, however, do *not* work.
+
 ## Features
 
 * Automatically start the timer when beginning a new run (when the character's position is the initial spawn in the Asylum)
