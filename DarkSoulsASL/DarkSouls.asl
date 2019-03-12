@@ -88,12 +88,12 @@ startup {
         }},
         {"0x2300", new Dictionary<uint, string>() {
             {0x40000000, "artorias"},
-            {0x08000000, "kalameet"},
+            {0x0C000000, "kalameet"},
             {0x20000000, "manus"},
             {0x80000000, "sguardian"}
         }},
         {"0x3C30", new Dictionary<uint, string>() {
-            {0x00000020, "firesage"}
+            {0x00004020, "firesage"}
         }},
         {"0x3C70", new Dictionary<uint, string>() {
             {0x08000000, "ceaseless"},
@@ -322,26 +322,30 @@ reset {
 }
 
 split {
-    bool shouldSplit = false;
-    string[] queueSplitTypes = "OnNextLoad ExitZone LastBonfire".Split(' ');
     vars.queuedSplits.ExceptWith(vars.completedSplits);
+    bool shouldSplit = false;
+    var queueSplitTypes = new string[] {
+        "OnNextLoad",
+        "ExitZone",
+        "LastBonfire"
+    };
 
     if (vars.isLoaded) {
         // Queue up splits if their respective event flags are newly set
         foreach (var ef in vars.eventFlags) {
-            if (ef.Current <= ef.Old) continue; // nothing newly set
+            if (ef.Current <= ef.Old) continue; 
 
-            foreach (uint mask in vars.efMasks[ef.Name].Keys) {
-                if (ef.Current & mask != 0) {
-                    foreach (string splitType in queueSplitTypes) {
-                        string splitFlag = vars.efMasks[ef.Name][mask] + splitType;
+            string eventFlagName = "";
+            if (vars.efMasks[ef.Name].TryGetValue(ef.Current ^ ef.Old, out eventFlagName)) {
+                foreach (string splitType in queueSplitTypes) {
+                    string splitFlag = eventFlagName + splitType;
 
-                        if (settings.ContainsKey(splitFlag) && settings[splitFlag])
-                            vars.completedSplits.Add(splitFlag);
-                        else if (!vars.completedSplits.Contains(splitFlag)) {
-                            vars.queuedSplits.Add(splitFlag);
-                            print("[DS.ASL] split: added "+splitFlag+" to queue");
-                        }
+                    // Do nothing if the split type isn't enabled by the user
+                    if (!(settings.ContainsKey(splitFlag) && settings[splitFlag]))
+                        continue;
+                    if (!vars.completedSplits.Contains(splitFlag)) {
+                        vars.queuedSplits.Add(splitFlag);
+                        print("[DS.ASL] split: added "+splitFlag+" to queue");
                     }
                 }
             }
@@ -379,18 +383,26 @@ split {
                 shouldSplit = (vars.bonfire.Changed &&
                                vars.bonfire.Current == vars.splitFlagBonfires[splitFlag]);
 
-            if (shouldSplit)
+            if (shouldSplit) {
                 print(String.Format("[DS.ASL] split: {0}", splitFlag));
-            return shouldSplit && vars.completedSplits.Add(splitFlag); 
+                vars.completedSplits.Add(splitFlag); 
+                break;
+            }
         }
     } else if (current.igt != 0) { // split on loads only, not main menu
         foreach (string splitFlag in vars.queuedSplits) {
-            if (splitFlag.Contains("OnNextLoad")) {
+            shouldSplit = splitFlag.Contains("OnNextLoad");
+            // If the splitFlag is for gwyn, make sure we're on the credits screen
+            shouldSplit = shouldSplit && (splitFlag.Contains("gwyn") ? vars.newNGPlus : true);
+
+            if (shouldSplit) {
                 print(String.Format("[DS.ASL] split: {0}", splitFlag));
-                return vars.completedSplits.Add(splitFlag); 
+                vars.completedSplits.Add(splitFlag); 
+                break;
             }
         }
     }
+    return shouldSplit;
 }
 
 isLoading { return true; } // disables gameTime approximation
