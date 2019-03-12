@@ -1,13 +1,12 @@
 state("DARKSOULS") {} 
 
 startup {
-    settings.Add("eventSplits", false, "Boss/Event Split Conditions");
-    settings.Add("miscSplits", false, "Other Split Conditions");
     settings.Add("startConds", false, "Auto Start (on start of new playthrough)");
     settings.Add("resetConds", false, "Auto Reset Conditions");
+    settings.Add("splitConds", false, "Auto Split Conditions");
     settings.Add("info", true, "=== Info ===");
     
-    settings.CurrentDefaultParent = "eventSplits";
+    settings.CurrentDefaultParent = "splitConds";
         settings.Add("artorias", true, "Artorias"); 
             settings.Add("artoriasExitZone", false, "On Exiting Boss Area", "artorias");
             settings.Add("artoriasOnNextLoad", true, "On Next Load", "artorias");
@@ -46,12 +45,10 @@ startup {
             settings.Add("sguardianLastBonfire", false, "On Resting At Oolacile Sanctuary Bonfire", "sguardian");
         settings.Add("seathOnNextLoad", true, "Seath (On Next Load)");
         settings.Add("sifOnNextLoad", true, "Sif (On Next Load)");
+        settings.Add("sgsOnNextLoad", true, "Sen's Gate Skip (On Next Load)");
         settings.Add("strayOnNextLoad", true, "Stray Demon (On Next Load)");
         settings.Add("taurusExitZone", true, "Taurus Demon (On Exiting Boss Area)");
-
-    settings.CurrentDefaultParent = "miscSplits";
-        settings.Add("sgsOnNextLoad", true, "Sen's Gate Skip (On Next Load)");
-        settings.Add("kilnwwOnFlagSet", true, "PCC Wrong Warp to Kiln");
+        settings.Add("wrongwarpKiln", true, "Wrong Warp to Kiln (Using PCC)");
 
     settings.CurrentDefaultParent = "resetConds";
         settings.Add("resetNewChar", false, "Reset on entering new character creation screen");
@@ -62,7 +59,7 @@ startup {
         settings.Add("info2", false, "Website: https://github.com/seanpwolf/AutoSplitters");
 
     vars.efMasks = new Dictionary<string, Dictionary<uint, string>>() {
-        {"bossMain", new Dictionary<uint, string>() {
+        {"0x0000", new Dictionary<uint, string>() {
             {0x00008000, "asylum"},
             {0x00200000, "boc"},
             {0x00040000, "fourkings"},
@@ -78,37 +75,37 @@ startup {
             {0x00020000, "seath"},
             {0x04000000, "sif"}
         }},
-        {"bossBurg", new Dictionary<uint, string>() {
+        {"0x0F70", new Dictionary<uint, string>() {
             {0x02000000, "capra"},
             {0x04000000, "taurus"}
         }},
-        {"dusk"    , new Dictionary<uint, string>() {
-            {0x00000400, "dusk"}, // 0x2000 for golden golem kill
-            {0x00800000, "dusk"}, 
+        {"0x1E40", new Dictionary<uint, string>() {
+            {0x00000400, "dusk"}, 
+            {0x00800000, "dusk"} 
         }},
-        {"bossMB"  , new Dictionary<uint, string>() {
+        {"0x1E70", new Dictionary<uint, string>() {
             {0x08000000, "butterfly"},
         }},
-        {"bossDLC" , new Dictionary<uint, string>() {
+        {"0x2300", new Dictionary<uint, string>() {
             {0x40000000, "artorias"},
-            {0x0C000000, "kalameet"},
+            {0x08000000, "kalameet"},
             {0x20000000, "manus"},
             {0x80000000, "sguardian"}
         }},
-        {"bossDF"  , new Dictionary<uint, string>() {
-            {0x00004020, "firesage"}
+        {"0x3C30", new Dictionary<uint, string>() {
+            {0x00000020, "firesage"}
         }},
-        {"bossCD"  , new Dictionary<uint, string>() {
+        {"0x3C70", new Dictionary<uint, string>() {
             {0x08000000, "ceaseless"},
             {0x04000000, "centipede"}
         }},
-        {"darkAL"  , new Dictionary<uint, string>() {
+        {"0x4630", new Dictionary<uint, string>() {
             {0x00008000, "darkAL"}
         }},
-        {"bossG"   , new Dictionary<uint, string>() {
+        {"0x4670", new Dictionary<uint, string>() {
             {0x08000000, "gwyndolin"}
         }},
-        {"bossSD"  , new Dictionary<uint, string>() {
+        {"0x5A70", new Dictionary<uint, string>() {
             {0x08000000, "stray"}
         }}
     };
@@ -142,38 +139,27 @@ startup {
     vars.shouldStart = false;
     vars.completedSplits = new HashSet<string>();
     vars.queuedSplits = new HashSet<string>();
-
-    vars.charDataTarget   = new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 40 34 53 32");
-    vars.charLoadedTarget = new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 48 04 8B 40 08 53");
-    vars.deathcamTarget   = new SigScanTarget(1, "A1 ?? ?? ?? ?? 39 48 3C 0F 94");
-    vars.eventFlagTarget  = new SigScanTarget(1, "A1 ?? ?? ?? ?? 53 55 56 8B F1 33 ED");
-    vars.worldAreaTarget  = new SigScanTarget(1, "A1 ?? ?? ?? ?? 53 55 56 8B B0");
-    vars.worldStateTarget = new SigScanTarget(4, "83 EC 0C A1 ?? ?? ?? ?? 80 B8");
-
     vars.count = 0;
     refreshRate = 1;
 }
 
 init {
-    if (!game.MainWindowTitle.Contains("DARK SOULS")) {
-        print("[DS.ASL] Window title doesn't contain 'DARK SOULS', assuming version is invalid.");
-        version = "invalid";
-        return;
-    }
     if (vars.count > 9) {
         print("[DS.ASL] Failed to sigscan 10 times, assuming version is invalid.");
-        version = "invalid";
+        version = "Invalid";
         return;
     }
-
     string procName = game.ProcessName + ".exe";
     var scanner = new SignatureScanner(game, modules.First().BaseAddress, modules.First().ModuleMemorySize);
-    int charDataPtr   = (int) scanner.Scan(vars.charDataTarget);
-    int charLoadedPtr = (int) scanner.Scan(vars.charLoadedTarget);
-    int deathcamPtr   = (int) scanner.Scan(vars.deathcamTarget);
-    int eventFlagPtr  = (int) scanner.Scan(vars.eventFlagTarget);
-    int worldAreaPtr  = (int) scanner.Scan(vars.worldAreaTarget);
-    int worldStatePtr = (int) scanner.Scan(vars.worldStateTarget);
+
+    // AOB Scans
+    int charDataPtr   = (int) scanner.Scan(new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 40 34 53 32"));
+    int charLoadedPtr = (int) scanner.Scan(new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 48 04 8B 40 08 53"));
+    int deathcamPtr   = (int) scanner.Scan(new SigScanTarget(1, "A1 ?? ?? ?? ?? 39 48 3C 0F 94"));
+    int eventFlagPtr  = (int) scanner.Scan(new SigScanTarget(1, "A1 ?? ?? ?? ?? 53 55 56 8B F1 33 ED"));
+    int worldAreaPtr  = (int) scanner.Scan(new SigScanTarget(1, "A1 ?? ?? ?? ?? 53 55 56 8B B0"));
+    int worldStatePtr = (int) scanner.Scan(new SigScanTarget(4, "83 EC 0C A1 ?? ?? ?? ?? 80 B8"));
+
     var pointers = new int[] {
         charDataPtr,
         charLoadedPtr,
@@ -187,6 +173,7 @@ init {
         throw new Exception("[DS.ASL] Failed to find all memory addresses.");
     }
 
+    // Read pointers from scans and make them relative (for DeepPointer usage)
     charDataPtr   = memory.ReadValue<int>((IntPtr)charDataPtr)   - (int)modules.First().BaseAddress;
     charLoadedPtr = memory.ReadValue<int>((IntPtr)charLoadedPtr) - (int)modules.First().BaseAddress;
     deathcamPtr   = memory.ReadValue<int>((IntPtr)deathcamPtr)   - (int)modules.First().BaseAddress;
@@ -204,7 +191,7 @@ init {
     else
         version = "Unknown (PTDE)";
 
-    // Updated every script iteration, so no MemoryWatchers needed
+    // Updated every script iteration without caring about changes, so no MemoryWatchers needed
     vars.charLoadedPtr = new DeepPointer(procName, charLoadedPtr, 4, 0);
     vars.igtPtr        = new DeepPointer(procName, charDataPtr, 0x68);
     vars.mpzonePtr     = new DeepPointer(procName, worldAreaPtr, 0xA14);
@@ -223,7 +210,6 @@ init {
     vars.xPos      = new MemoryWatcher<float>(new DeepPointer(procName, worldStatePtr, 0xB70));
     vars.yPos      = new MemoryWatcher<float>(new DeepPointer(procName, worldStatePtr, 0xB74));
     vars.zPos      = new MemoryWatcher<float>(new DeepPointer(procName, worldStatePtr, 0xB78));
-
     vars.watchers = new MemoryWatcherList() {
         vars.ngplus,
         vars.deathcam,
@@ -238,16 +224,16 @@ init {
 
     // Also updated when game is loaded (separated so all event flag watchers can be iterated over separately)
     vars.eventFlags = new MemoryWatcherList() {
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x0000)) { Name = "bossMain" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x0F70)) { Name = "bossBurg" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x1E40)) { Name = "dusk" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x1E70)) { Name = "bossMB" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x2300)) { Name = "bossDLC" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x3C30)) { Name = "bossDF" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x3C70)) { Name = "bossCD" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x4630)) { Name = "darkAL" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x4670)) { Name = "bossG" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x5A70)) { Name = "bossSD" }
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x0000)) { Name = "0x0000" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x0F70)) { Name = "0x0F70" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x1E40)) { Name = "0x1E40" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x1E70)) { Name = "0x1E70" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x2300)) { Name = "0x2300" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x3C30)) { Name = "0x3C30" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x3C70)) { Name = "0x3C70" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x4630)) { Name = "0x4630" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x4670)) { Name = "0x4670" },
+        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x5A70)) { Name = "0x5A70" }
     };
     foreach (var ef in vars.eventFlags)
         ef.Current = 0xFFFFFFFF;
@@ -260,7 +246,7 @@ exit {
 }
 
 update {
-    if (version.Contains("invalid")) return false;
+    if (version.Contains("Invalid")) return false;
     Func<float,float,float,bool> floatEquals = (x,y,p) => (Math.Abs(x-y) <= p);
 
     current.igt = vars.igtPtr.Deref<int>(game);
@@ -269,7 +255,7 @@ update {
     if (vars.isLoaded && vars.mpzonePtr.Deref<int>(game) != -1) {
         vars.eventFlags.UpdateAll(game);
         vars.watchers.UpdateAll(game);
-    } else {
+    } else { // !vars.isLoaded || mpzone == -1
         vars.charName.Update(game);
         vars.soulLevel.Update(game);
     }
@@ -337,27 +323,25 @@ reset {
 
 split {
     bool shouldSplit = false;
+    string[] queueSplitTypes = "OnNextLoad ExitZone LastBonfire".Split(' ');
     vars.queuedSplits.ExceptWith(vars.completedSplits);
 
     if (vars.isLoaded) {
         // Queue up splits if their respective event flags are newly set
         foreach (var ef in vars.eventFlags) {
-            uint mask = (ef.Current > ef.Old) ? ef.Current ^ ef.Old : (uint)0;
-            bool splitEnabled = false;
-            string splitFlag = "";
-            string[] splitTypes = "OnNextLoad ExitZone LastBonfire".Split(' ');
+            if (ef.Current <= ef.Old) continue; // nothing newly set
 
-            if (vars.efMasks[ef.Name].TryGetValue(mask, out splitFlag)) {
-                foreach (string s in splitTypes) {
-                    splitEnabled = settings.ContainsKey(splitFlag+s);
-                    splitEnabled = splitEnabled && settings[splitFlag+s];
+            foreach (uint mask in vars.efMasks[ef.Name].Keys) {
+                if (ef.Current & mask != 0) {
+                    foreach (string splitType in queueSplitTypes) {
+                        string splitFlag = vars.efMasks[ef.Name][mask] + splitType;
 
-                    if (!splitEnabled)
-                        vars.completedSplits.Add(splitFlag+s);
-
-                    if (!vars.completedSplits.Contains(splitFlag+s)) {
-                        vars.queuedSplits.Add(splitFlag+s);
-                        print(String.Format("[DS.ASL] split: added {0} to queue", splitFlag+s));
+                        if (settings.ContainsKey(splitFlag) && settings[splitFlag])
+                            vars.completedSplits.Add(splitFlag);
+                        else if (!vars.completedSplits.Contains(splitFlag)) {
+                            vars.queuedSplits.Add(splitFlag);
+                            print("[DS.ASL] split: added "+splitFlag+" to queue");
+                        }
                     }
                 }
             }
@@ -380,11 +364,10 @@ split {
         if (vars.world.Old == 12 && vars.world.Current == 18 && 
                 vars.area.Changed && vars.mpzone.Changed && 
                 vars.mpzone.Current == 0x2BF20) {
-            vars.completedSplits.Add("kilnwwOnFlagSet");
-            if (settings["kilnwwOnFlagSet"]) {
-                print("[DS.ASL] split: kilnwwOnFlagSet");
-                return settings["kilnwwOnFlagSet"];
-            }
+            vars.completedSplits.Add("wrongwarpKiln");
+            if (settings["wrongwarpKiln"])
+                print("[DS.ASL] split: wrongwarpKiln");
+            return settings["wrongwarpKiln"];
         }
 
         // Check and split queued splits if their conditions are met
