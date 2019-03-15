@@ -4,15 +4,9 @@ startup {
     refreshRate = 0.5;
 
     // --- Start Settings ---
-    settings.Add("startConds", false, "Auto Start (on start of new playthrough)");
-    settings.Add("resetConds", false, "Auto Reset Conditions");
     settings.Add("splitConds", false, "Auto Split Conditions");
     settings.Add("info", true, "=== Info ===");
     
-    settings.CurrentDefaultParent = "resetConds";
-        settings.Add("resetNewChar", false, "Reset on entering new character creation screen");
-        settings.Add("resetNewRun", true, "Reset if starting position is the initial spawn in Asylum");
-
     settings.CurrentDefaultParent = "splitConds";
         settings.Add("artorias", true, "Artorias"); 
             settings.Add("artoriasExitZone", false, "On Exiting Boss Area", "artorias");
@@ -135,36 +129,77 @@ startup {
         {"sguardianLastBonfire", 1212961}
     };
 
-    vars.pointers = new Dictionary<string, DeepPointer>() {
-        {"charLoaded", null},
-        {"igt",        null},
-        {"worldZone",  null}
+    vars.aobs = new Dictionary<string, SigScanTarget>() {
+        {"charData",   new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 40 34 53 32")},
+        {"charLoaded", new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 48 04 8B 40 08 53")},
+        {"deathcam",   new SigScanTarget(1, "A1 ?? ?? ?? ?? 39 48 3C 0F 94")},
+        {"eventFlag",  new SigScanTarget(1, "A1 ?? ?? ?? ?? 53 55 56 8B F1 33 ED")},
+        {"worldState", new SigScanTarget(4, "83 EC 0C A1 ?? ?? ?? ?? 80 B8")},
+        {"worldZone",  new SigScanTarget(1, "A1 ?? ?? ?? ?? 53 55 56 8B B0")}
     };
 
-    // Effectively a manual MemoryWatcher like data structure - done so
-    // I can update this data structure only when values pass a condition
-    vars.area = new Dictionary<string, dynamic>(){
-        {"Current", 0},
-        {"Old",     0},
-        {"Changed", false}
-    };
-    vars.mpzone = new Dictionary<string, dynamic>(){
-        {"Current", 0},
-        {"Old",     0},
-        {"Changed", false}
-    };
-    vars.world = new Dictionary<string, dynamic>(){
-        {"Current", 0},
-        {"Old",     0},
-        {"Changed", false}
+    vars.pointers = new Dictionary<string, IntPtr>() {
+        {"charData",   IntPtr.Zero},
+        {"charLoaded", IntPtr.Zero},
+        {"deathcam",   IntPtr.Zero},
+        {"eventFlag",  IntPtr.Zero},
+        {"worldState", IntPtr.Zero},
+        {"worldZone",  IntPtr.Zero},
+        {"igt",        IntPtr.Zero},
+        {"wazone",     IntPtr.Zero},
+        {"ngplus",     IntPtr.Zero},
+        {"bonfire",    IntPtr.Zero},
+        {"xPos",       IntPtr.Zero},
+        {"yPos",       IntPtr.Zero},
+        {"zPos",       IntPtr.Zero},
+        {"charNo",     IntPtr.Zero},
+        {"charClass",  IntPtr.Zero},
+        {"charGift",   IntPtr.Zero},
+        {"charDex",    IntPtr.Zero},
+        {"charSL",     IntPtr.Zero}
     };
 
-    vars.UpdateDictWatcher = (Func<Dictionary<string, dynamic>, dynamic, bool>)((dw, val) => {
-        dw["Old"] = dw["Current"];
-        dw["Current"] = val;
-        dw["Changed"] = !(dw["Current"].Equals(dw["Old"]));
-        return dw["Changed"]; 
+    vars.AOBScan = (Func<Process,SignatureScanner,string,bool>)((proc, scanner, ptrName) => {
+        vars.pointers[ptrName] = scanner.Scan(vars.aobs[ptrName]);
+        if (vars.pointers[ptrName] != IntPtr.Zero)
+            vars.pointers[ptrName] = proc.ReadPointer((IntPtr)vars.pointers[ptrName]);
+        return (vars.pointers[ptrName] == IntPtr.Zero);
     });
+
+    vars.DerefOffsets = (Func<Process, IntPtr, int[], IntPtr>)((proc, basePtr, offsets) => {
+        IntPtr ptr = basePtr;
+        for (int i = 0; i < offsets.Length - 1; i++)
+            ptr = proc.ReadPointer((IntPtr)((int)ptr + offsets[i]));
+        return (ptr = (IntPtr)((int)ptr + offsets[offsets.Length - 1]));
+    });
+
+    // Effectively a custom MemoryWatcher like data structure
+    // little ugly, but probably the best way to handle this in ASL
+    var DSMemoryWatcher = new Dictionary<string, dynamic>() {
+        {"Current", null},
+        {"Old",     null},
+        {"Changed", false}
+    };
+
+    vars.UpdateDictWatcher = (Func<Dictionary<string, dynamic>, dynamic, bool>)((dsmw, val) => {
+        dsmw["Old"]     = (dsmw["Current"] != null) ? dsmw["Current"] : val;
+        dsmw["Current"] = val;
+        return (dsmw["Changed"] = !(dsmw["Current"].Equals(dsmw["Old"])));
+    });
+
+    vars.area      = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.mpzone    = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.world     = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.ngplus    = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.bonfire   = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.xPos      = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.yPos      = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.zPos      = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charNo    = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charClass = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charGift  = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charDex   = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charSL    = new Dictionary<string, dynamic>(DSMemoryWatcher);
 
     vars.count = 0;
     vars.igt = 0;
@@ -183,85 +218,44 @@ init {
         version = "Invalid";
         return;
     }
-    string procName = game.ProcessName + ".exe";
-    var scanner = new SignatureScanner(game, modules.First().BaseAddress, modules.First().ModuleMemorySize);
 
     // AOB scans for base pointers 
-    int charDataPtr   = (int) scanner.Scan(new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 40 34 53 32"));
-    int charLoadedPtr = (int) scanner.Scan(new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 48 04 8B 40 08 53"));
-    int deathcamPtr   = (int) scanner.Scan(new SigScanTarget(1, "A1 ?? ?? ?? ?? 39 48 3C 0F 94"));
-    int eventFlagPtr  = (int) scanner.Scan(new SigScanTarget(1, "A1 ?? ?? ?? ?? 53 55 56 8B F1 33 ED"));
-    int worldStatePtr = (int) scanner.Scan(new SigScanTarget(4, "83 EC 0C A1 ?? ?? ?? ?? 80 B8"));
-    int worldZonePtr  = (int) scanner.Scan(new SigScanTarget(1, "A1 ?? ?? ?? ?? 53 55 56 8B B0"));
-    var scanPtrs = new int[] {
-        charDataPtr,
-        charLoadedPtr,
-        deathcamPtr,
-        eventFlagPtr,
-        worldStatePtr,
-        worldZonePtr
-    };
-    if (scanPtrs.Any(ptr => ptr == 0))
-        throw new Exception("[DS.ASL] Failed to find all memory addresses ("+(++vars.count)+").");
+    var scanner = new SignatureScanner(game, modules.First().BaseAddress, modules.First().ModuleMemorySize);
+    foreach (string key in vars.aobs.Keys)
+        if (vars.AOBScan(game, scanner, key))
+            throw new Exception("[DS.ASL] Failed to find memory address ("+(++vars.count)+").");
+    
+    IntPtr ptr = IntPtr.Zero;
+    vars.pointers["igt"]    = vars.DerefOffsets(game, vars.pointers["charData"], new int[] {0, 0x68});
+    vars.pointers["ngplus"] = vars.DerefOffsets(game, vars.pointers["charData"], new int[] {0, 0x3C});
+    vars.pointers["wazone"] = vars.DerefOffsets(game, vars.pointers["worldZone"], new int[] {0, 0xA10});
 
-    // Read pointers from scans and make them relative (for DeepPointer usage)
-    charDataPtr   = memory.ReadValue<int>((IntPtr)charDataPtr)   - (int)modules.First().BaseAddress;
-    charLoadedPtr = memory.ReadValue<int>((IntPtr)charLoadedPtr) - (int)modules.First().BaseAddress;
-    deathcamPtr   = memory.ReadValue<int>((IntPtr)deathcamPtr)   - (int)modules.First().BaseAddress;
-    eventFlagPtr  = memory.ReadValue<int>((IntPtr)eventFlagPtr)  - (int)modules.First().BaseAddress;
-    worldStatePtr = memory.ReadValue<int>((IntPtr)worldStatePtr) - (int)modules.First().BaseAddress;
-    worldZonePtr  = memory.ReadValue<int>((IntPtr)worldZonePtr)  - (int)modules.First().BaseAddress;
+    ptr = vars.DerefOffsets(game, vars.pointers["worldState"], new int[] {0, 0});
+    vars.pointers["bonfire"]   = (IntPtr) ((int)ptr + 0xB04);
+    vars.pointers["xPos"]      = (IntPtr) ((int)ptr + 0xB70);
+    vars.pointers["yPos"]      = (IntPtr) ((int)ptr + 0xB74);
+    vars.pointers["zPos"]      = (IntPtr) ((int)ptr + 0xB78);
 
-    // Updated every script iteration without caring about changes, so no MemoryWatchers needed
-    vars.pointers["charLoaded"] = new DeepPointer(procName, charLoadedPtr, 4, 0);
-    vars.pointers["igt"]        = new DeepPointer(procName, charDataPtr, 0x68);
-    vars.pointers["worldZone"]  = new DeepPointer(procName, worldZonePtr, 0xA10);
+    ptr = vars.DerefOffsets(game, vars.pointers["charData"], new int[] {0, 8, 0});
+    vars.pointers["charNo"]    = (IntPtr) ((int)ptr + 8);
+    vars.pointers["charClass"] = (IntPtr) ((int)ptr + 0xC6);
+    vars.pointers["charGift"]  = (IntPtr) ((int)ptr + 0xC8);
+    vars.pointers["charDex"]   = (IntPtr) ((int)ptr + 0x58);
+    vars.pointers["charSL"]    = (IntPtr) ((int)ptr + 0x88);
 
-    // Updated when the game is loaded (values are irrelevant when game isn't loaded)
-    vars.ngplus    = new MemoryWatcher<int>(new DeepPointer(procName, charDataPtr, 0x3C));
-    vars.deathcam  = new MemoryWatcher<byte>(new DeepPointer(procName, deathcamPtr, 0x40));
-    vars.bonfire   = new MemoryWatcher<int>(new DeepPointer(procName, worldStatePtr, 0xB04));
-    vars.xPos      = new MemoryWatcher<float>(new DeepPointer(procName, worldStatePtr, 0xB70));
-    vars.yPos      = new MemoryWatcher<float>(new DeepPointer(procName, worldStatePtr, 0xB74));
-    vars.zPos      = new MemoryWatcher<float>(new DeepPointer(procName, worldStatePtr, 0xB78));
-    vars.watchers = new MemoryWatcherList() {
-        vars.ngplus,
-        vars.deathcam,
-        vars.bonfire,
-        vars.xPos,
-        vars.yPos,
-        vars.zPos
-    };
-
-    // Updated when the game is not loaded (these are used for an auto reset condition)
-    //vars.charNum = new MemoryWatcher<int>(new DeepPointer(procName, charDataPtr, 0x8, 0x8));
-    //vars.charClass = new MemoryWatcher<byte>(new DeepPointer(procName, charDataPtr, 0x8, 0xC6));
-    //vars.charGift = new MemoryWatcher<byte>(new DeepPointer(procName, charDataPtr, 0x8, 0xC8));
-    //vars.charVit = new MemoryWatcher<int>(new DeepPointer(procName, charDataPtr, 0x8, 0x38));
-    //vars.charAtn = new MemoryWatcher<int>(new DeepPointer(procName, charDataPtr, 0x8, 0x40));
-    //vars.charEnd = new MemoryWatcher<int>(new DeepPointer(procName, charDataPtr, 0x8, 0x48));
-    //vars.charStr = new MemoryWatcher<int>(new DeepPointer(procName, charDataPtr, 0x8, 0x50));
-    //vars.charDex = new MemoryWatcher<int>(new DeepPointer(procName, charDataPtr, 0x8, 0x58));
-    //vars.charInt = new MemoryWatcher<int>(new DeepPointer(procName, charDataPtr, 0x8, 0x60));
-    //vars.charFth = new MemoryWatcher<int>(new DeepPointer(procName, charDataPtr, 0x8, 0x68));
-    //vars.charRes = new MemoryWatcher<int>(new DeepPointer(procName, charDataPtr, 0x8, 0x80));
-    //vars.charLvl = new MemoryWatcher<int>(new DeepPointer(procName, charDataPtr, 0x8, 0x88));
-
-    // Also updated when game is loaded (separated so all event flag watchers can be iterated over separately)
+    ptr = vars.DerefOffsets(game, vars.pointers["eventFlag"], new int[] {0, 0, 0});
     vars.eventFlags = new MemoryWatcherList() {
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x0000)) { Name = "0x0000" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x0F70)) { Name = "0x0F70" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x1E40)) { Name = "0x1E40" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x1E70)) { Name = "0x1E70" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x2300)) { Name = "0x2300" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x3C30)) { Name = "0x3C30" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x3C70)) { Name = "0x3C70" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x4630)) { Name = "0x4630" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x4670)) { Name = "0x4670" },
-        new MemoryWatcher<uint>(new DeepPointer(procName, eventFlagPtr, 0, 0x5A70)) { Name = "0x5A70" }
+        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x0000)) { Name = "0x0000", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x0F70)) { Name = "0x0F70", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x1E40)) { Name = "0x1E40", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x1E70)) { Name = "0x1E70", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x2300)) { Name = "0x2300", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x3C30)) { Name = "0x3C30", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x3C70)) { Name = "0x3C70", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x4630)) { Name = "0x4630", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x4670)) { Name = "0x4670", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x5A70)) { Name = "0x5A70", Current = 0xFFFFFFFF }
     };
-    foreach (var ef in vars.eventFlags)
-        ef.Current = 0xFFFFFFFF;
 
     // Check against known versions (for informational/debugging purposes)
     if (modules.First().ModuleMemorySize == 0x11C2000)
@@ -284,23 +278,44 @@ update {
     if (version.Contains("Invalid")) return false;
     Func<float,float,float,bool> floatEquals = (x,y,p) => (Math.Abs(x-y) <= p);
 
-    long worldAreaZone = vars.pointers["worldZone"].Deref<long>(game);
-    vars.isLoaded  = vars.pointers["charLoaded"].Deref<int>(game) != 0; 
-    current.igt    = vars.pointers["igt"].Deref<int>(game);
-    current.area   =  (byte) (worldAreaZone >> 16 & 0xFF);
-    current.world  =  (byte) (worldAreaZone >> 24 & 0xFF);
-    current.mpzone =  (int)  (worldAreaZone >> 32);
+    current.igt        = memory.ReadValue<int>((IntPtr)vars.pointers["igt"]);
+    long wazone        = memory.ReadValue<long>((IntPtr)vars.pointers["wazone"]);
+    current.charLoaded = memory.ReadPointer((IntPtr)vars.DerefOffsets(game, vars.pointers["charLoaded"], new int[] {0, 4, 0}));
+    current.deathcam   = memory.ReadValue<int>((IntPtr)vars.DerefOffsets(game, vars.pointers["deathcam"], new int[] {0, 0x40}));
+    current.ngplus     = memory.ReadValue<int>((IntPtr)vars.pointers["ngplus"]);
+    current.bonfire    = memory.ReadValue<int>((IntPtr)vars.pointers["bonfire"]);
+    current.xPos       = memory.ReadValue<float>((IntPtr)vars.pointers["xPos"]);
+    current.yPos       = memory.ReadValue<float>((IntPtr)vars.pointers["yPos"]);
+    current.zPos       = memory.ReadValue<float>((IntPtr)vars.pointers["zPos"]);
+    current.charNo     = memory.ReadValue<int>((IntPtr)vars.pointers["charNo"]);
+    current.charClass  = memory.ReadValue<byte>((IntPtr)vars.pointers["charClass"]);
+    current.charGift   = memory.ReadValue<byte>((IntPtr)vars.pointers["charGift"]);
+    current.charDex    = memory.ReadValue<int>((IntPtr)vars.pointers["charDex"]);
+    current.charSL     = memory.ReadValue<int>((IntPtr)vars.pointers["charSL"]);
+    vars.isLoaded      = current.charLoaded != IntPtr.Zero;
+    current.area       = (byte) (wazone >> 16 & 0xFF);
+    current.world      = (byte) (wazone >> 24 & 0xFF);
+    current.mpzone     = (int)  (wazone >> 32);
 
     if (vars.isLoaded && current.mpzone != -1) {
         vars.eventFlags.UpdateAll(game);
-        vars.watchers.UpdateAll(game);
         vars.UpdateDictWatcher(vars.area, current.area);
         vars.UpdateDictWatcher(vars.world, current.world);
         vars.UpdateDictWatcher(vars.mpzone, current.mpzone);
-    } else { // !vars.isLoaded || mpzone == -1
+        vars.UpdateDictWatcher(vars.ngplus, current.ngplus);
+        vars.UpdateDictWatcher(vars.bonfire, current.bonfire);
+        vars.UpdateDictWatcher(vars.xPos, current.xPos);
+        vars.UpdateDictWatcher(vars.yPos, current.yPos);
+        vars.UpdateDictWatcher(vars.zPos, current.zPos);
+    } else if (current.igt == 0) { // main menu
+        vars.UpdateDictWatcher(vars.charNo, current.charNo);
+        vars.UpdateDictWatcher(vars.charClass, current.charClass);
+        vars.UpdateDictWatcher(vars.charGift, current.charGift);
+        vars.UpdateDictWatcher(vars.charDex, current.charDex);
+        vars.UpdateDictWatcher(vars.charSL, current.charSL);
     }
 
-    if (vars.ngplus.Changed)
+    if (vars.ngplus["Changed"])
         vars.newNGPlus = true;
     if (vars.newNGPlus && vars.world["Current"] == 18 && vars.area["Current"] == 1) {
         vars.newNGPlus = false;
@@ -312,9 +327,9 @@ update {
     vars.shouldStart = (vars.world["Current"] == 18 && 
                         vars.area["Current"] == 1 && 
                         vars.mpzone["Current"] == -2 &&
-                        floatEquals(vars.xPos.Current, -15.45f, 0.001f) && 
-                        floatEquals(vars.yPos.Current, 184.70f, 0.001f) && 
-                        floatEquals(vars.zPos.Current, -46.80f, 0.001f));
+                        floatEquals(vars.xPos["Current"], -15.45f, 0.001f) && 
+                        floatEquals(vars.yPos["Current"], 184.70f, 0.001f) && 
+                        floatEquals(vars.zPos["Current"], -46.80f, 0.001f));
 
     if (vars.mpzone["Changed"]) {
         print(String.Format("[DS.ASL] world:  {0} -> {1}", vars.world["Old"], vars.world["Current"]));
@@ -336,24 +351,11 @@ start {
 
     if (vars.shouldStart)
         print("[DS.ASL] start: starting timer...");
-    return vars.shouldStart && settings["startConds"];
+    return vars.shouldStart;
 }
 
 reset {
     bool shouldReset = false;
-
-    // Reset if the current position is the initial spawn in asylum upon
-    // creating a new character and if the current IGT is 2 seconds or less
-    shouldReset = vars.shouldStart && vars.igt <= 2000;
-
-    // "delay" auto resets until moved from the spawn point; prevents chain
-    // of auto start -> auto reset etc. since they share similar conditionals
-    if (vars.justStarted) 
-        vars.justStarted = shouldReset;
-    else if (shouldReset) {
-        print("[DS.ASL] reset: resetNewRun");
-        return settings["resetNewRun"];
-    }
 }
 
 split {
@@ -418,8 +420,8 @@ split {
                 shouldSplit = (vars.mpzone["Changed"] && 
                                vars.mpzone["Old"] == vars.splitFlagZones[splitFlag]);
             else if (splitFlag.Contains("LastBonfire")) 
-                shouldSplit = (vars.bonfire.Changed &&
-                               vars.bonfire.Current == vars.splitFlagBonfires[splitFlag]);
+                shouldSplit = (vars.bonfire["Changed"] &&
+                               vars.bonfire["Current"] == vars.splitFlagBonfires[splitFlag]);
 
             if (shouldSplit) {
                 print(String.Format("[DS.ASL] split: {0}", splitFlag));
