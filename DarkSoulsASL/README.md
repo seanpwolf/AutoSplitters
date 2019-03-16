@@ -8,11 +8,11 @@ Most of the testing was done on the current official Steam version, however any 
 
 ## Features
 
-* Automatically start the timer when beginning a new run (when the character's position is the initial spawn in the Asylum)
-* Automatically reset the timer when beginning a new run (like the auto start condition) or when entering the new character creation screen 
-* Automatically split on boss/event flags being set (like defeating a boss or turning Anor Londo dark) - with appropriate split timings for each boss/event (such as on the next load screen or upon exiting the boss area)
+* Automatically start the timer when the character's position is the initial spawn in the Asylum (normally shortly after skipping the lore intro cutscene)
+* Automatically reset the timer when entering the new character creation screen
+* Automatically split on event flags being set (like defeating a boss or turning Anor Londo dark) and a few other conditions with appropriate split timings for each (such as on the next load screen or upon exiting the boss area)
 
-Note: these features are user configurable - many auto start/split/reset conditions can be individually turned on or off if desired
+Note: these auto split conditions can be individually turned on or off if desired
 
 ## Install & Usage
 
@@ -29,15 +29,11 @@ If the DarkSouls game process is detected while setting this up, LiveSplit shoul
 
 Make sure to also switch to game time in LiveSplit to have the timer sync with the IGT in Dark Souls (right click on LiveSplit -> Compare Against -> Game Time).
 
-## Known Issues
-
-* The "auto reset on entering new character creation screen" condition has triggered incorrectly - this is probably a niche timing issue as it hasn't popped up more than once in testing (and it may already be fixed from switching to a lower script refresh rate)
-
 ## Credits / Special Thanks
 
 * Phokz ([Cheat Engine Table](http://fearlessrevolution.com/viewtopic.php?f=4&t=63)), Wulf2k ([DSCM](https://github.com/Wulf2k/DaS-PC-MPChan)), TKGP ([DS Gadget](https://github.com/JKAnderson/DS-Gadget)), and others who contributed to these projects - many of the pointers and offsets used were sourced from these projects which aided me in speed (from not having to hunt down pointers/offsets) or in finding extra similar pointers and offsets
 * SpeedSouls Community - for (indirectly) helping me with Dark Souls speed stuff
-* 0Seren, Souzooka, and Spiraster - for some of their auto splitters that served as general inspiration when it came to style/format of this auto splitter
+* 0Seren, Souzooka, and Spiraster - for some of their auto splitters that served as general inspiration when it came to style/format of this and my other auto splitters
 
 ## Contact
 
