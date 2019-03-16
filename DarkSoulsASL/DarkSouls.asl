@@ -129,7 +129,15 @@ startup {
         {"sguardianLastBonfire", 1212961}
     };
 
-    vars.aobs = new Dictionary<string, SigScanTarget>() {
+    // Effectively a custom MemoryWatcher like data structure
+    // little ugly, but probably the best way to handle this in ASL
+    var DSMemoryWatcher = new Dictionary<string, dynamic>() {
+        {"Current", null},
+        {"Old",     null},
+        {"Changed", false}
+    };
+
+    vars.aobsPTDE = new Dictionary<string, SigScanTarget>() {
         {"charData",   new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 40 34 53 32")},
         {"charLoaded", new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 48 04 8B 40 08 53")},
         {"deathcam",   new SigScanTarget(1, "A1 ?? ?? ?? ?? 39 48 3C 0F 94")},
@@ -160,7 +168,7 @@ startup {
     };
 
     vars.AOBScan = (Func<Process,SignatureScanner,string,bool>)((proc, scanner, ptrName) => {
-        vars.pointers[ptrName] = scanner.Scan(vars.aobs[ptrName]);
+        vars.pointers[ptrName] = scanner.Scan(vars.aobsPTDE[ptrName]);
         if (vars.pointers[ptrName] != IntPtr.Zero)
             vars.pointers[ptrName] = proc.ReadPointer((IntPtr)vars.pointers[ptrName]);
         return (vars.pointers[ptrName] == IntPtr.Zero);
@@ -173,18 +181,26 @@ startup {
         return (ptr = (IntPtr)((int)ptr + offsets[offsets.Length - 1]));
     });
 
-    // Effectively a custom MemoryWatcher like data structure
-    // little ugly, but probably the best way to handle this in ASL
-    var DSMemoryWatcher = new Dictionary<string, dynamic>() {
-        {"Current", null},
-        {"Old",     null},
-        {"Changed", false}
-    };
+    vars.StablePosEquals = (Func<float,float,float,float,bool>)((x,y,z,prec) => {
+        bool isEqual = true;
+        isEqual = isEqual && (Math.Abs(vars.xPos["Current"] - x) <= prec);
+        isEqual = isEqual && (Math.Abs(vars.yPos["Current"] - y) <= prec);
+        isEqual = isEqual && (Math.Abs(vars.zPos["Current"] - z) <= prec);
+        return isEqual;
+    });
 
     vars.UpdateDictWatcher = (Func<Dictionary<string, dynamic>, dynamic, bool>)((dsmw, val) => {
-        dsmw["Old"]     = (dsmw["Current"] != null) ? dsmw["Current"] : val;
+        dsmw["Old"] = (dsmw["Current"] != null) ? dsmw["Current"] : val;
         dsmw["Current"] = val;
         return (dsmw["Changed"] = !(dsmw["Current"].Equals(dsmw["Old"])));
+    });
+
+    vars.WAZoneEquals = (Func<byte, byte, int, bool>)((w, a, z) => {
+        bool isEqual = !(w == null && a == null && z == null);
+        isEqual = isEqual && ((w != null) ? vars.world["Current"]  == w : true);
+        isEqual = isEqual && ((a != null) ? vars.area["Current"]   == a : true);
+        isEqual = isEqual && ((z != null) ? vars.mpzone["Current"] == z : true);
+        return isEqual;
     });
 
     vars.area      = new Dictionary<string, dynamic>(DSMemoryWatcher);
@@ -201,19 +217,17 @@ startup {
     vars.charDex   = new Dictionary<string, dynamic>(DSMemoryWatcher);
     vars.charSL    = new Dictionary<string, dynamic>(DSMemoryWatcher);
 
-    vars.count = 0;
+    vars.failedScans = 0;
     vars.igt = 0;
     vars.isLoaded = false;
-    vars.justStarted = true;
-    vars.newNGPlus = false;
+    vars.newClear = false;
     vars.removedQuitoutDelay = true;
-    vars.shouldStart = false;
     vars.completedSplits = new HashSet<string>();
     vars.queuedSplits = new HashSet<string>();
 }
 
 init {
-    if (vars.count > 9) {
+    if (vars.failedScans > 9) {
         print("[DS.ASL] Failed to sigscan 10 times, assuming version is invalid.");
         version = "Invalid";
         return;
@@ -221,9 +235,9 @@ init {
 
     // AOB scans for base pointers 
     var scanner = new SignatureScanner(game, modules.First().BaseAddress, modules.First().ModuleMemorySize);
-    foreach (string key in vars.aobs.Keys)
+    foreach (string key in vars.aobsPTDE.Keys)
         if (vars.AOBScan(game, scanner, key))
-            throw new Exception("[DS.ASL] Failed to find memory address ("+(++vars.count)+").");
+            throw new Exception("[DS.ASL] Failed to find memory address ("+(++vars.failedScans)+").");
     
     IntPtr ptr = IntPtr.Zero;
     vars.pointers["igt"]    = vars.DerefOffsets(game, vars.pointers["charData"], new int[] {0, 0x68});
@@ -270,66 +284,38 @@ init {
 }
 
 exit {
-    vars.count = 0;
+    foreach (string key in vars.pointers.Keys)
+        vars.pointers[key] = IntPtr.Zero;
+    vars.failedScans = 0;
     refreshRate = 0.5;
 }
 
 update {
     if (version.Contains("Invalid")) return false;
-    Func<float,float,float,bool> floatEquals = (x,y,p) => (Math.Abs(x-y) <= p);
 
-    current.igt        = memory.ReadValue<int>((IntPtr)vars.pointers["igt"]);
-    long wazone        = memory.ReadValue<long>((IntPtr)vars.pointers["wazone"]);
-    current.charLoaded = memory.ReadPointer((IntPtr)vars.DerefOffsets(game, vars.pointers["charLoaded"], new int[] {0, 4, 0}));
-    current.deathcam   = memory.ReadValue<int>((IntPtr)vars.DerefOffsets(game, vars.pointers["deathcam"], new int[] {0, 0x40}));
-    current.ngplus     = memory.ReadValue<int>((IntPtr)vars.pointers["ngplus"]);
-    current.bonfire    = memory.ReadValue<int>((IntPtr)vars.pointers["bonfire"]);
-    current.xPos       = memory.ReadValue<float>((IntPtr)vars.pointers["xPos"]);
-    current.yPos       = memory.ReadValue<float>((IntPtr)vars.pointers["yPos"]);
-    current.zPos       = memory.ReadValue<float>((IntPtr)vars.pointers["zPos"]);
-    current.charNo     = memory.ReadValue<int>((IntPtr)vars.pointers["charNo"]);
-    current.charClass  = memory.ReadValue<byte>((IntPtr)vars.pointers["charClass"]);
-    current.charGift   = memory.ReadValue<byte>((IntPtr)vars.pointers["charGift"]);
-    current.charDex    = memory.ReadValue<int>((IntPtr)vars.pointers["charDex"]);
-    current.charSL     = memory.ReadValue<int>((IntPtr)vars.pointers["charSL"]);
-    vars.isLoaded      = current.charLoaded != IntPtr.Zero;
-    current.area       = (byte) (wazone >> 16 & 0xFF);
-    current.world      = (byte) (wazone >> 24 & 0xFF);
-    current.mpzone     = (int)  (wazone >> 32);
+    current.igt      = game.ReadValue<int>((IntPtr)vars.pointers["igt"]);
+    var wazone       = game.ReadValue<long>((IntPtr)vars.pointers["wazone"]);
+    var charLoaded   = game.ReadPointer((IntPtr)vars.DerefOffsets(game, vars.pointers["charLoaded"], new int[] {0, 4, 0}));
+    current.deathcam = game.ReadValue<int>((IntPtr)vars.DerefOffsets(game, vars.pointers["deathcam"], new int[] {0, 0x40}));
+    vars.isLoaded    = charLoaded != IntPtr.Zero;
 
-    if (vars.isLoaded && current.mpzone != -1) {
+    if (vars.isLoaded && (wazone >> 32) != -1) {
         vars.eventFlags.UpdateAll(game);
-        vars.UpdateDictWatcher(vars.area, current.area);
-        vars.UpdateDictWatcher(vars.world, current.world);
-        vars.UpdateDictWatcher(vars.mpzone, current.mpzone);
-        vars.UpdateDictWatcher(vars.ngplus, current.ngplus);
-        vars.UpdateDictWatcher(vars.bonfire, current.bonfire);
-        vars.UpdateDictWatcher(vars.xPos, current.xPos);
-        vars.UpdateDictWatcher(vars.yPos, current.yPos);
-        vars.UpdateDictWatcher(vars.zPos, current.zPos);
+        vars.UpdateDictWatcher(vars.ngplus,  game.ReadValue<int>((IntPtr)vars.pointers["ngplus"]));
+        vars.UpdateDictWatcher(vars.bonfire, game.ReadValue<int>((IntPtr)vars.pointers["bonfire"]));
+        vars.UpdateDictWatcher(vars.xPos,    game.ReadValue<float>((IntPtr)vars.pointers["xPos"]));
+        vars.UpdateDictWatcher(vars.yPos,    game.ReadValue<float>((IntPtr)vars.pointers["yPos"]));
+        vars.UpdateDictWatcher(vars.zPos,    game.ReadValue<float>((IntPtr)vars.pointers["zPos"]));
+        vars.UpdateDictWatcher(vars.area,   (byte) (wazone >> 16 & 0xFF));
+        vars.UpdateDictWatcher(vars.world,  (byte) (wazone >> 24 & 0xFF));
+        vars.UpdateDictWatcher(vars.mpzone, (int)  (wazone >> 32));
     } else if (current.igt == 0) { // main menu
-        vars.UpdateDictWatcher(vars.charNo, current.charNo);
-        vars.UpdateDictWatcher(vars.charClass, current.charClass);
-        vars.UpdateDictWatcher(vars.charGift, current.charGift);
-        vars.UpdateDictWatcher(vars.charDex, current.charDex);
-        vars.UpdateDictWatcher(vars.charSL, current.charSL);
+        vars.UpdateDictWatcher(vars.charNo,    game.ReadValue<int>((IntPtr)vars.pointers["charNo"]));
+        vars.UpdateDictWatcher(vars.charClass, game.ReadValue<byte>((IntPtr)vars.pointers["charClass"]));
+        vars.UpdateDictWatcher(vars.charGift,  game.ReadValue<byte>((IntPtr)vars.pointers["charGift"]));
+        vars.UpdateDictWatcher(vars.charDex,   game.ReadValue<int>((IntPtr)vars.pointers["charDex"]));
+        vars.UpdateDictWatcher(vars.charSL,    game.ReadValue<int>((IntPtr)vars.pointers["charSL"]));
     }
-
-    if (vars.ngplus["Changed"])
-        vars.newNGPlus = true;
-    if (vars.newNGPlus && vars.world["Current"] == 18 && vars.area["Current"] == 1) {
-        vars.newNGPlus = false;
-        vars.completedSplits.Clear();
-        vars.queuedSplits.Clear();
-        print("[DS.ASL] update: new NG+ reached, clearing split hashsets");
-    }
-
-    vars.shouldStart = (vars.world["Current"] == 18 && 
-                        vars.area["Current"] == 1 && 
-                        vars.mpzone["Current"] == -2 &&
-                        floatEquals(vars.xPos["Current"], -15.45f, 0.001f) && 
-                        floatEquals(vars.yPos["Current"], 184.70f, 0.001f) && 
-                        floatEquals(vars.zPos["Current"], -46.80f, 0.001f));
 
     if (vars.mpzone["Changed"]) {
         print(String.Format("[DS.ASL] world:  {0} -> {1}", vars.world["Old"], vars.world["Current"]));
@@ -339,23 +325,35 @@ update {
 }
 
 start {
-    if (!(vars.igt == 0 && vars.completedSplits.Count == 0)) {
+    if (vars.igt > 0) {
         vars.igt = 0;
-        vars.justStarted = true;
-        vars.newNGPlus = false;
+        vars.newClear = false;
         vars.removedQuitoutDelay = true;
         vars.completedSplits.Clear();
         vars.queuedSplits.Clear();
         print("[DS.ASL] start: reinitialized helpers");
     }
 
-    if (vars.shouldStart)
-        print("[DS.ASL] start: starting timer...");
-    return vars.shouldStart;
+    bool shouldStart = vars.WAZoneEquals(18,1,-2) && vars.StablePosEquals(-15.45f,184.70f,-46.80f,.001f);
+    if (shouldStart)
+        print("[DS.ASL] start: in asylum starting spawn (starting timer)");
+    return shouldStart;
 }
 
 reset {
+    if (vars.ngplus["Changed"])
+        vars.newClear = true;
+    if (vars.newClear && vars.WAZoneEquals(18, 1, null)) { 
+        vars.newClear = false;
+        vars.completedSplits.Clear();
+        vars.queuedSplits.Clear();
+        print("[DS.ASL] new playthrough reached (additional NG+), clearing split hashsets");
+    }
+
     bool shouldReset = false;
+    if (shouldReset)
+        print("[DS.ASL] reset: todo");
+    return shouldReset;
 }
 
 split {
@@ -379,8 +377,8 @@ split {
 
                     // Do nothing if the split type isn't enabled by the user
                     if (!(settings.ContainsKey(splitFlag) && settings[splitFlag]))
-                        continue;
-                    if (!vars.completedSplits.Contains(splitFlag)) {
+                        vars.completedSplits.Add(splitFlag);
+                    else if (!vars.completedSplits.Contains(splitFlag)) {
                         vars.queuedSplits.Add(splitFlag);
                         print("[DS.ASL] split: added "+splitFlag+" to queue");
                     }
@@ -388,23 +386,18 @@ split {
             }
         }
 
-        // SGS
-        if (vars.mpzone["Changed"] && vars.mpzone["Current"] == 0x249F0 &&
-                vars.world["Current"] == 10 && vars.area["Current"] == 1 && 
-                vars.deathcam.Current == 1) {
+        // Sen's Gate Skip
+        if (vars.mpzone["Changed"] && current.deathcam == 1 && vars.WAZoneEquals(10, 1, 0x249F0)) {
             if (!settings["sgsOnNextLoad"])
                 vars.completedSplits.Add("sgsOnNextLoad");
-
-            if (!vars.completedSplits.Contains("sgsOnNextLoad")) {
+            else if (!vars.completedSplits.Contains("sgsOnNextLoad")) {
                 vars.queuedSplits.Add("sgsOnNextLoad");
                 print("[DS.ASL] split: added sgsOnNextLoad to queue");
             }
         }
 
-        // PCC WW to Kiln
-        if (vars.world["Old"] == 12 && vars.world["Current"] == 18 && 
-                vars.area["Changed"] && vars.mpzone["Changed"] && 
-                vars.mpzone["Current"] == 0x2BF20) {
+        // Wrong Warp to Kiln (using PCC)
+        if (vars.mpzone["Changed"] && vars.world["Old"] == 12 && vars.WAZoneEquals(18, 0, 0x2BF20)) {
             if (!vars.completedSplits.Contains("wrongwarpKiln")) {
                 vars.completedSplits.Add("wrongwarpKiln");
                 if (settings["wrongwarpKiln"]) {
@@ -429,11 +422,11 @@ split {
                 break;
             }
         }
-    } else if (current.igt != 0) { // split on loads only, not main menu
+    } else if (current.igt > 0) { // split on loads only, not main menu
         foreach (string splitFlag in vars.queuedSplits) {
+            // If the splitFlag is for gwyn, make sure we're also on the credits screen
             shouldSplit = splitFlag.Contains("OnNextLoad");
-            // If the splitFlag is for gwyn, make sure we're on the credits screen
-            shouldSplit = shouldSplit && (splitFlag.Contains("gwyn") ? vars.newNGPlus : true);
+            shouldSplit = shouldSplit && (splitFlag.Contains("gwyn") ? vars.newClear : true);
 
             if (shouldSplit) {
                 print(String.Format("[DS.ASL] split: {0}", splitFlag));
