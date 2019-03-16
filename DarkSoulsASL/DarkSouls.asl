@@ -181,7 +181,7 @@ startup {
         return (ptr = (IntPtr)((int)ptr + offsets[offsets.Length - 1]));
     });
 
-    vars.StablePosEquals = (Func<float,float,float,float,bool>)((x,y,z,prec) => {
+    vars.StablePosEquals = (Func<float, float, float, float, bool>)((x, y, z, prec) => {
         bool isEqual = true;
         isEqual = isEqual && (Math.Abs(vars.xPos["Current"] - x) <= prec);
         isEqual = isEqual && (Math.Abs(vars.yPos["Current"] - y) <= prec);
@@ -284,8 +284,6 @@ init {
 }
 
 exit {
-    foreach (string key in vars.pointers.Keys)
-        vars.pointers[key] = IntPtr.Zero;
     vars.failedScans = 0;
     refreshRate = 0.5;
 }
@@ -296,7 +294,7 @@ update {
     current.igt      = game.ReadValue<int>((IntPtr)vars.pointers["igt"]);
     var wazone       = game.ReadValue<long>((IntPtr)vars.pointers["wazone"]);
     var charLoaded   = game.ReadPointer((IntPtr)vars.DerefOffsets(game, vars.pointers["charLoaded"], new int[] {0, 4, 0}));
-    current.deathcam = game.ReadValue<int>((IntPtr)vars.DerefOffsets(game, vars.pointers["deathcam"], new int[] {0, 0x40}));
+    current.deathcam = game.ReadValue<byte>((IntPtr)vars.DerefOffsets(game, vars.pointers["deathcam"], new int[] {0, 0x40}));
     vars.isLoaded    = charLoaded != IntPtr.Zero;
 
     if (vars.isLoaded && (wazone >> 32) != -1) {
@@ -317,10 +315,13 @@ update {
         vars.UpdateDictWatcher(vars.charSL,    game.ReadValue<int>((IntPtr)vars.pointers["charSL"]));
     }
 
-    if (vars.mpzone["Changed"]) {
+    if (vars.world["Changed"]) 
         print(String.Format("[DS.ASL] world:  {0} -> {1}", vars.world["Old"], vars.world["Current"]));
+    if (vars.area["Changed"]) 
         print(String.Format("[DS.ASL] area:   {0} -> {1}", vars.area["Old"], vars.area["Current"]));
-        print(String.Format("[DS.ASL] mpzone: {0} -> {1}\n", vars.mpzone["Old"], vars.mpzone["Current"]));
+    if (vars.mpzone["Changed"]) {
+        print(String.Format("[DS.ASL] mpzone: {0:X} -> {1:X}", vars.mpzone["Old"], vars.mpzone["Current"]));
+        print(String.Format("[DS.ASL] deathcam: {0}", current.deathcam));
     }
 }
 
@@ -334,7 +335,8 @@ start {
         print("[DS.ASL] start: reinitialized helpers");
     }
 
-    bool shouldStart = vars.WAZoneEquals(18,1,-2) && vars.StablePosEquals(-15.45f,184.70f,-46.80f,.001f);
+    bool shouldStart = vars.WAZoneEquals(18,1,-2);
+    shouldStart = shouldStart && vars.StablePosEquals(-15.45f,184.70f,-46.80f,.001f);
     if (shouldStart)
         print("[DS.ASL] start: in asylum starting spawn (starting timer)");
     return shouldStart;
@@ -350,9 +352,14 @@ reset {
         print("[DS.ASL] new playthrough reached (additional NG+), clearing split hashsets");
     }
 
-    bool shouldReset = false;
+    bool shouldReset = current.igt == 0;
+    shouldReset = shouldReset && vars.charNo["Current"]    == -1;
+    shouldReset = shouldReset && vars.charDex["Current"]   == 13;
+    shouldReset = shouldReset && vars.charSL["Current"]    == 4;
+    shouldReset = shouldReset && vars.charClass["Current"] == 0;
+    shouldReset = shouldReset && vars.charGift["Current"]  == 0;
     if (shouldReset)
-        print("[DS.ASL] reset: todo");
+        print("[DS.ASL] reset: in char creation, assuming new run (resetting)");
     return shouldReset;
 }
 
