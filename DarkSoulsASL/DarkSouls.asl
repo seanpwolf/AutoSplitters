@@ -226,16 +226,20 @@ startup {
 
 init {
     if (vars.failedScans > 9) {
-        print("[DS.ASL] Failed to sigscan 10 times, assuming version is invalid.");
-        version = "Invalid";
-        return;
+        print("[DS.ASL] Failed to sigscan 10 times; assuming version is invalid.");
+        return version = "Invalid";
     }
-    // gfwl launcher exe: BaseAddr = 0x12D0000, ModMemSize = 0x4D000 (~300,000)
 
-    // AOB scans for base pointers 
     IntPtr ptr      = IntPtr.Zero;
     IntPtr baseAddr = modules.First().BaseAddress;
     int memsize     = modules.First().ModuleMemorySize - baseAddr.ToInt32();
+    if (memsize < 0) {
+        vars.failedScans = 10;
+        print("[DS.ASL] Module memory size is less than zero; assuming version is invalid");
+        return version = "Invalid";
+    }
+
+    // AOB scans for base pointers 
     var scanner     = new SignatureScanner(game, baseAddr, memsize);
     foreach (string key in vars.aobsPTDE.Keys) {
         if (vars.AOBScan(game, scanner, key))
@@ -290,7 +294,7 @@ init {
 }
 
 exit {
-    foreach (string key in vars.pointers.Keys.ToList())
+    foreach (string key in new List<string>(vars.pointers.Keys))
         vars.pointers[key] = IntPtr.Zero; 
     vars.failedScans = 0;
     refreshRate = 0.5;

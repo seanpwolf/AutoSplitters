@@ -4,7 +4,7 @@ A [LiveSplit](http://livesplit.org) auto splitter for **Dark Souls: PTDE** (in t
 
 ### Supported Versions
 
-Most of the testing was done on the current official Steam version, however any Steamworks based versions should work. Any GFWL based versions of the game, however, do *not* work.
+Most of the testing was done on the current official Steam version, however any version should work. Unofficial GFWL based builds need the launcher executable to be renamed (from `DARKSOULS.exe` to anything else, like `DARKSOULS-launcher.exe`) for the script to pick up the actual game executable.
 
 ## Features
 
