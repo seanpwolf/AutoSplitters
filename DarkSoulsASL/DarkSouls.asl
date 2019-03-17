@@ -1,4 +1,5 @@
-state("DARKSOULS") {} 
+state("DARKSOULS") {} // Steamworks
+state("DATA") {}      // GFWL
 
 startup {
     refreshRate = 0.5;
@@ -57,7 +58,7 @@ startup {
     // --- End Settings ---
 
     vars.efMasks = new Dictionary<string, Dictionary<uint, string>>() {
-        {"0x0000", new Dictionary<uint, string>() {
+        {"0000", new Dictionary<uint, string>() {
             {0x00008000, "asylum"},
             {0x00200000, "boc"},
             {0x00040000, "fourkings"},
@@ -73,37 +74,37 @@ startup {
             {0x00020000, "seath"},
             {0x04000000, "sif"}
         }},
-        {"0x0F70", new Dictionary<uint, string>() {
+        {"0F70", new Dictionary<uint, string>() {
             {0x02000000, "capra"},
             {0x04000000, "taurus"}
         }},
-        {"0x1E40", new Dictionary<uint, string>() {
+        {"1E40", new Dictionary<uint, string>() {
             {0x00000400, "dusk"}, 
             {0x00800000, "dusk"} 
         }},
-        {"0x1E70", new Dictionary<uint, string>() {
+        {"1E70", new Dictionary<uint, string>() {
             {0x08000000, "butterfly"},
         }},
-        {"0x2300", new Dictionary<uint, string>() {
+        {"2300", new Dictionary<uint, string>() {
             {0x40000000, "artorias"},
             {0x0C000000, "kalameet"},
             {0x20000000, "manus"},
             {0x80000000, "sguardian"}
         }},
-        {"0x3C30", new Dictionary<uint, string>() {
+        {"3C30", new Dictionary<uint, string>() {
             {0x00004020, "firesage"}
         }},
-        {"0x3C70", new Dictionary<uint, string>() {
+        {"3C70", new Dictionary<uint, string>() {
             {0x08000000, "ceaseless"},
             {0x04000000, "centipede"}
         }},
-        {"0x4630", new Dictionary<uint, string>() {
+        {"4630", new Dictionary<uint, string>() {
             {0x00008000, "darkAL"}
         }},
-        {"0x4670", new Dictionary<uint, string>() {
+        {"4670", new Dictionary<uint, string>() {
             {0x08000000, "gwyndolin"}
         }},
-        {"0x5A70", new Dictionary<uint, string>() {
+        {"5A70", new Dictionary<uint, string>() {
             {0x08000000, "stray"}
         }}
     };
@@ -124,17 +125,8 @@ startup {
     vars.splitFlagBonfires = new Dictionary<string, int>() {
         {"asylumLastBonfire",    1022960}, 
         {"artoriasLastBonfire",  1212962},
-        //{"quelaagLastBonfire",   1402960}, // DoC
-        {"quelaagLastBonfire",   1412961}, // Demon Ruins
+        {"quelaagLastBonfire",   1412961}, 
         {"sguardianLastBonfire", 1212961}
-    };
-
-    // Effectively a custom MemoryWatcher like data structure
-    // little ugly, but probably the best way to handle this in ASL
-    var DSMemoryWatcher = new Dictionary<string, dynamic>() {
-        {"Current", null},
-        {"Old",     null},
-        {"Changed", false}
     };
 
     vars.aobsPTDE = new Dictionary<string, SigScanTarget>() {
@@ -167,6 +159,34 @@ startup {
         {"charSL",     IntPtr.Zero}
     };
 
+    var DSMemoryWatcher = new Dictionary<string, dynamic>() {
+        {"Current", null},
+        {"Old",     null},
+        {"Changed", false}
+    };
+
+    vars.area      = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.mpzone    = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.world     = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.ngplus    = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.bonfire   = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.xPos      = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.yPos      = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.zPos      = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charNo    = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charClass = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charGift  = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charDex   = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charSL    = new Dictionary<string, dynamic>(DSMemoryWatcher);
+
+    vars.igt = 0;
+    vars.failedScans = 0;
+    vars.isLoaded = false;
+    vars.newClear = false;
+    vars.removedQuitoutDelay = true;
+    vars.completedSplits = new HashSet<string>();
+    vars.queuedSplits = new HashSet<string>();
+
     vars.AOBScan = (Func<Process,SignatureScanner,string,bool>)((proc, scanner, ptrName) => {
         vars.pointers[ptrName] = scanner.Scan(vars.aobsPTDE[ptrName]);
         if (vars.pointers[ptrName] != IntPtr.Zero)
@@ -177,8 +197,8 @@ startup {
     vars.DerefOffsets = (Func<Process, IntPtr, int[], IntPtr>)((proc, basePtr, offsets) => {
         IntPtr ptr = basePtr;
         for (int i = 0; i < offsets.Length - 1; i++)
-            ptr = proc.ReadPointer((IntPtr)((int)ptr + offsets[i]));
-        return (ptr = (IntPtr)((int)ptr + offsets[offsets.Length - 1]));
+            ptr = proc.ReadPointer((IntPtr) (ptr.ToInt32() + offsets[i]));
+        return (ptr = (IntPtr) (ptr.ToInt32() + offsets[offsets.Length - 1]));
     });
 
     vars.StablePosEquals = (Func<float, float, float, float, bool>)((x, y, z, prec) => {
@@ -202,28 +222,6 @@ startup {
         isEqual = isEqual && ((z != null) ? vars.mpzone["Current"] == z : true);
         return isEqual;
     });
-
-    vars.area      = new Dictionary<string, dynamic>(DSMemoryWatcher);
-    vars.mpzone    = new Dictionary<string, dynamic>(DSMemoryWatcher);
-    vars.world     = new Dictionary<string, dynamic>(DSMemoryWatcher);
-    vars.ngplus    = new Dictionary<string, dynamic>(DSMemoryWatcher);
-    vars.bonfire   = new Dictionary<string, dynamic>(DSMemoryWatcher);
-    vars.xPos      = new Dictionary<string, dynamic>(DSMemoryWatcher);
-    vars.yPos      = new Dictionary<string, dynamic>(DSMemoryWatcher);
-    vars.zPos      = new Dictionary<string, dynamic>(DSMemoryWatcher);
-    vars.charNo    = new Dictionary<string, dynamic>(DSMemoryWatcher);
-    vars.charClass = new Dictionary<string, dynamic>(DSMemoryWatcher);
-    vars.charGift  = new Dictionary<string, dynamic>(DSMemoryWatcher);
-    vars.charDex   = new Dictionary<string, dynamic>(DSMemoryWatcher);
-    vars.charSL    = new Dictionary<string, dynamic>(DSMemoryWatcher);
-
-    vars.failedScans = 0;
-    vars.igt = 0;
-    vars.isLoaded = false;
-    vars.newClear = false;
-    vars.removedQuitoutDelay = true;
-    vars.completedSplits = new HashSet<string>();
-    vars.queuedSplits = new HashSet<string>();
 }
 
 init {
@@ -232,58 +230,68 @@ init {
         version = "Invalid";
         return;
     }
+    // gfwl launcher exe: BaseAddr = 0x12D0000, ModMemSize = 0x4D000 (~300,000)
 
     // AOB scans for base pointers 
-    var scanner = new SignatureScanner(game, modules.First().BaseAddress, modules.First().ModuleMemorySize);
-    foreach (string key in vars.aobsPTDE.Keys)
+    IntPtr ptr      = IntPtr.Zero;
+    IntPtr baseAddr = modules.First().BaseAddress;
+    int memsize     = modules.First().ModuleMemorySize - baseAddr.ToInt32();
+    var scanner     = new SignatureScanner(game, baseAddr, memsize);
+    foreach (string key in vars.aobsPTDE.Keys) {
         if (vars.AOBScan(game, scanner, key))
             throw new Exception("[DS.ASL] Failed to find memory address ("+(++vars.failedScans)+").");
-    
-    IntPtr ptr = IntPtr.Zero;
-    vars.pointers["igt"]    = vars.DerefOffsets(game, vars.pointers["charData"], new int[] {0, 0x68});
-    vars.pointers["ngplus"] = vars.DerefOffsets(game, vars.pointers["charData"], new int[] {0, 0x3C});
-    vars.pointers["wazone"] = vars.DerefOffsets(game, vars.pointers["worldZone"], new int[] {0, 0xA10});
+        if (key.Equals("charLoaded") || key.Equals("deathcam"))
+            continue;
 
-    ptr = vars.DerefOffsets(game, vars.pointers["worldState"], new int[] {0, 0});
-    vars.pointers["bonfire"]   = (IntPtr) ((int)ptr + 0xB04);
-    vars.pointers["xPos"]      = (IntPtr) ((int)ptr + 0xB70);
-    vars.pointers["yPos"]      = (IntPtr) ((int)ptr + 0xB74);
-    vars.pointers["zPos"]      = (IntPtr) ((int)ptr + 0xB78);
+        ptr = game.ReadPointer((IntPtr) vars.pointers[key]);
+        if (ptr == IntPtr.Zero)
+            throw new Exception("[DS.ASL] Game not fully loaded yet ("+(++vars.failedScans)+").");
+        vars.pointers[key] = ptr;
+    }
 
-    ptr = vars.DerefOffsets(game, vars.pointers["charData"], new int[] {0, 8, 0});
-    vars.pointers["charNo"]    = (IntPtr) ((int)ptr + 8);
-    vars.pointers["charClass"] = (IntPtr) ((int)ptr + 0xC6);
-    vars.pointers["charGift"]  = (IntPtr) ((int)ptr + 0xC8);
-    vars.pointers["charDex"]   = (IntPtr) ((int)ptr + 0x58);
-    vars.pointers["charSL"]    = (IntPtr) ((int)ptr + 0x88);
+    ptr = vars.DerefOffsets(game, vars.pointers["charData"], new int[] {8, 0});
+    vars.pointers["igt"]       = (IntPtr) (vars.pointers["charData"].ToInt32() + 0x68);
+    vars.pointers["ngplus"]    = (IntPtr) (vars.pointers["charData"].ToInt32() + 0x3C);
+    vars.pointers["wazone"]    = (IntPtr) (vars.pointers["worldZone"].ToInt32() + 0xA10);
+    vars.pointers["bonfire"]   = (IntPtr) (vars.pointers["worldState"].ToInt32() + 0xB04);
+    vars.pointers["xPos"]      = (IntPtr) (vars.pointers["worldState"].ToInt32() + 0xB70);
+    vars.pointers["yPos"]      = (IntPtr) (vars.pointers["worldState"].ToInt32() + 0xB74);
+    vars.pointers["zPos"]      = (IntPtr) (vars.pointers["worldState"].ToInt32() + 0xB78);
+    vars.pointers["charNo"]    = (IntPtr) (ptr.ToInt32() + 8);
+    vars.pointers["charClass"] = (IntPtr) (ptr.ToInt32() + 0xC6);
+    vars.pointers["charGift"]  = (IntPtr) (ptr.ToInt32() + 0xC8);
+    vars.pointers["charDex"]   = (IntPtr) (ptr.ToInt32() + 0x58);
+    vars.pointers["charSL"]    = (IntPtr) (ptr.ToInt32() + 0x88);
 
-    ptr = vars.DerefOffsets(game, vars.pointers["eventFlag"], new int[] {0, 0, 0});
+    ptr = vars.DerefOffsets(game, vars.pointers["eventFlag"], new int[] {0, 0});
     vars.eventFlags = new MemoryWatcherList() {
-        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x0000)) { Name = "0x0000", Current = 0xFFFFFFFF },
-        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x0F70)) { Name = "0x0F70", Current = 0xFFFFFFFF },
-        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x1E40)) { Name = "0x1E40", Current = 0xFFFFFFFF },
-        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x1E70)) { Name = "0x1E70", Current = 0xFFFFFFFF },
-        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x2300)) { Name = "0x2300", Current = 0xFFFFFFFF },
-        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x3C30)) { Name = "0x3C30", Current = 0xFFFFFFFF },
-        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x3C70)) { Name = "0x3C70", Current = 0xFFFFFFFF },
-        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x4630)) { Name = "0x4630", Current = 0xFFFFFFFF },
-        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x4670)) { Name = "0x4670", Current = 0xFFFFFFFF },
-        new MemoryWatcher<uint>((IntPtr) ((int)ptr + 0x5A70)) { Name = "0x5A70", Current = 0xFFFFFFFF }
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x0000)) { Name = "0000", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x0F70)) { Name = "0F70", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x1E40)) { Name = "1E40", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x1E70)) { Name = "1E70", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x2300)) { Name = "2300", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x3C30)) { Name = "3C30", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x3C70)) { Name = "3C70", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x4630)) { Name = "4630", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x4670)) { Name = "4670", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x5A70)) { Name = "5A70", Current = 0xFFFFFFFF }
     };
 
     // Check against known versions (for informational/debugging purposes)
     if (modules.First().ModuleMemorySize == 0x11C2000)
-        version = "Steam (PTDE)";
+        version = "Current (PTDE/Steam)";
     else if (modules.First().ModuleMemorySize == 0x11C6000)
-        version = "Debug (PTDE)";
+        version = "Debug (PTDE/Steam)";
     else if (modules.First().ModuleMemorySize == 0x11BF000)
-        version = "Beta (PTDE)";
+        version = "Beta (PTDE/Steam)";
     else
-        version = "Unknown (PTDE)";
+        version = "Unknown (PTDE/" + ((game.ProcessName.Equals("DATA")) ? "GFWL)" : "Steam)");
     refreshRate = 30;
 }
 
 exit {
+    foreach (string key in vars.pointers.Keys.ToList())
+        vars.pointers[key] = IntPtr.Zero; 
     vars.failedScans = 0;
     refreshRate = 0.5;
 }
@@ -314,15 +322,6 @@ update {
         vars.UpdateDictWatcher(vars.charDex,   game.ReadValue<int>((IntPtr)vars.pointers["charDex"]));
         vars.UpdateDictWatcher(vars.charSL,    game.ReadValue<int>((IntPtr)vars.pointers["charSL"]));
     }
-
-    if (vars.world["Changed"]) 
-        print(String.Format("[DS.ASL] world:  {0} -> {1}", vars.world["Old"], vars.world["Current"]));
-    if (vars.area["Changed"]) 
-        print(String.Format("[DS.ASL] area:   {0} -> {1}", vars.area["Old"], vars.area["Current"]));
-    if (vars.mpzone["Changed"]) {
-        print(String.Format("[DS.ASL] mpzone: {0:X} -> {1:X}", vars.mpzone["Old"], vars.mpzone["Current"]));
-        print(String.Format("[DS.ASL] deathcam: {0}", current.deathcam));
-    }
 }
 
 start {
@@ -332,13 +331,12 @@ start {
         vars.removedQuitoutDelay = true;
         vars.completedSplits.Clear();
         vars.queuedSplits.Clear();
-        print("[DS.ASL] start: reinitialized helpers");
     }
 
-    bool shouldStart = vars.WAZoneEquals(18,1,-2);
-    shouldStart = shouldStart && vars.StablePosEquals(-15.45f,184.70f,-46.80f,.001f);
+    bool shouldStart = vars.WAZoneEquals(18, 1, -2);
+    shouldStart = shouldStart && vars.StablePosEquals(-15.45f, 184.70f, -46.80f, 0.001f);
     if (shouldStart)
-        print("[DS.ASL] start: in asylum starting spawn (starting timer)");
+        print("[DS.ASL] starting timer... (in asylum starting spawn)");
     return shouldStart;
 }
 
@@ -359,7 +357,7 @@ reset {
     shouldReset = shouldReset && vars.charClass["Current"] == 0;
     shouldReset = shouldReset && vars.charGift["Current"]  == 0;
     if (shouldReset)
-        print("[DS.ASL] reset: in char creation, assuming new run (resetting)");
+        print("[DS.ASL] in char creation, assuming new run (resetting)");
     return shouldReset;
 }
 
@@ -424,20 +422,20 @@ split {
                                vars.bonfire["Current"] == vars.splitFlagBonfires[splitFlag]);
 
             if (shouldSplit) {
-                print(String.Format("[DS.ASL] split: {0}", splitFlag));
                 vars.completedSplits.Add(splitFlag); 
+                print(String.Format("[DS.ASL] split: {0}", splitFlag));
                 break;
             }
         }
-    } else if (current.igt > 0) { // split on loads only, not main menu
+    } else if (current.igt > 0) { // exclude main menu "loads"
         foreach (string splitFlag in vars.queuedSplits) {
             // If the splitFlag is for gwyn, make sure we're also on the credits screen
             shouldSplit = splitFlag.Contains("OnNextLoad");
             shouldSplit = shouldSplit && (splitFlag.Contains("gwyn") ? vars.newClear : true);
 
             if (shouldSplit) {
-                print(String.Format("[DS.ASL] split: {0}", splitFlag));
                 vars.completedSplits.Add(splitFlag); 
+                print(String.Format("[DS.ASL] split: {0}", splitFlag));
                 break;
             }
         }
