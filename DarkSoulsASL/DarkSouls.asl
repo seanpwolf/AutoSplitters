@@ -1,76 +1,64 @@
-state("DARKSOULS") {}
-state("DARKSOULS", "Debug") { int igt : 0xF7C8C0, 0x68; }
-
-state("DARKSOULS", "Steam") {
-    int charPtr : 0xF7DC70, 4, 0;
-    int igt     : 0xF78700, 0x68;
-    int mpzone  : 0xF7E204, 0xA14;
-}
+state("DARKSOULS") {} // Steamworks
+state("DATA") {}      // GFWL
 
 startup {
-    settings.Add("eventSplits", false, "Boss/Event Split Conditions");
-    settings.Add("miscSplits", false, "Other Split Conditions");
-    settings.Add("startConds", false, "Auto Start (on start of new playthrough)");
-    settings.Add("resetConds", false, "Auto Reset Conditions");
+    refreshRate = 0.5;
+
+    // --- Start Settings ---
+    settings.Add("splitConds", false, "Auto Split Conditions");
     settings.Add("info", true, "=== Info ===");
     
-    settings.CurrentDefaultParent = "eventSplits";
-    settings.Add("artorias", true, "Artorias"); 
-        settings.Add("artoriasExitZone", false, "On Exiting Boss Area", "artorias");
-        settings.Add("artoriasOnNextLoad", true, "On Next Load", "artorias");
-        settings.Add("artoriasLastBonfire", false, "On Resting At Oolacile Township Bonfire", "artorias");
-    settings.Add("asylum", true, "Asylum Demon");
-        settings.Add("asylumLastBonfire", false, "On Entering Firelink Shrine", "asylum");
-        settings.Add("asylumOnNextLoad", true, "On Next Load", "asylum");
-    settings.Add("bocOnNextLoad", true, "Bed of Chaos (On Next Load)");
-    settings.Add("capraOnNextLoad", true, "Capra Demon (On Next Load)");
-    settings.Add("ceaselessOnNextLoad", true, "Ceaseless Discharge (On Next Load)");
-    settings.Add("centipedeExitZone", true, "Centipede Demon (On Exiting Boss Area)"); 
-    settings.Add("firesageExitZone", true, "Demon Firesage (On Exiting Boss Area)"); 
-    settings.Add("duskOnNextLoad", true, "Dusk Freed (On Next Load)");
-    settings.Add("fourkingsOnNextLoad", true, "Four Kings (On Next Load)");
-    settings.Add("gapingOnNextLoad", true, "Gaping Dragon (On Next Load)");
-    settings.Add("gargsOnNextLoad", true, "Gargoyles (On Next Load)");
-    settings.Add("golemExitZone", true, "Iron Golem (On Entering Anor Londo)"); 
-    settings.Add("gwynOnNextLoad", true, "Gwyn (On Credits)");
-    settings.Add("gwyndolinOnNextLoad", true, "Gwyndolin (On Next Load)");
-    settings.Add("kalameetOnNextLoad", true, "Kalameet (On Next Load)");
-    settings.Add("manusOnNextLoad", true, "Manus (On Next Load)");
-    settings.Add("butterflyOnNextLoad", true, "Moonlight Butterfly (On Next Load)");
-    settings.Add("nitoOnNextLoad", true, "Nito (On Next Load)");
-    settings.Add("ons", true, "Ornstein & Smough"); 
-        settings.Add("onsOnNextLoad", false, "On Next Load", "ons");
-        settings.Add("darkALOnNextLoad", true, "On Next Load After Turning Anor Londo Dark", "ons");
-    settings.Add("pinwheelExitZone", true, "Pinwheel (On Exiting Boss Area)");
-    settings.Add("priscilla", true, "Priscilla");
-        settings.Add("priscillaExitZone", false, "On Exiting Painted World", "priscilla");
-        settings.Add("priscillaOnNextLoad", true, "On Next Load", "priscilla");
-    settings.Add("quelaag", true, "Quelaag"); 
-        settings.Add("quelaagOnNextLoad", true, "On Next Load", "quelaag");
-        settings.Add("quelaagLastBonfire", false, "On Resting At Demon Ruins Bonfire", "quelaag");
-    settings.Add("sguardian", true, "Sanctuary Guardian"); 
-        settings.Add("sguardianExitZone", true, "On Exiting Boss Area", "sguardian");
-        settings.Add("sguardianLastBonfire", false, "On Resting At Oolacile Sanctuary Bonfire", "sguardian");
-    settings.Add("seathOnNextLoad", true, "Seath (On Next Load)");
-    settings.Add("sifOnNextLoad", true, "Sif (On Next Load)");
-    settings.Add("strayOnNextLoad", true, "Stray Demon (On Next Load)");
-    settings.Add("taurusExitZone", true, "Taurus Demon (On Exiting Boss Area)");
-
-    settings.CurrentDefaultParent = "miscSplits";
-    settings.Add("sgsOnNextLoad", true, "Sen's Gate Skip (On Next Load)");
-    settings.Add("kilnwwOnFlagSet", true, "PCC Wrong Warp to Kiln");
-
-    settings.CurrentDefaultParent = "resetConds";
-    settings.Add("resetNewChar", false, "Reset on entering new character creation screen");
-    settings.Add("resetNewRun", true, "Reset if starting position is the initial spawn in Asylum");
+    settings.CurrentDefaultParent = "splitConds";
+        settings.Add("artorias", true, "Artorias"); 
+            settings.Add("artoriasExitZone", false, "On Exiting Boss Area", "artorias");
+            settings.Add("artoriasOnNextLoad", true, "On Next Load", "artorias");
+            settings.Add("artoriasLastBonfire", false, "On Resting At Oolacile Township Bonfire", "artorias");
+        settings.Add("asylum", true, "Asylum Demon");
+            settings.Add("asylumLastBonfire", false, "On Entering Firelink Shrine", "asylum");
+            settings.Add("asylumOnNextLoad", true, "On Next Load", "asylum");
+        settings.Add("bocOnNextLoad", true, "Bed of Chaos (On Next Load)");
+        settings.Add("capraOnNextLoad", true, "Capra Demon (On Next Load)");
+        settings.Add("ceaselessOnNextLoad", true, "Ceaseless Discharge (On Next Load)");
+        settings.Add("centipedeExitZone", true, "Centipede Demon (On Exiting Boss Area)"); 
+        settings.Add("firesageExitZone", true, "Demon Firesage (On Exiting Boss Area)"); 
+        settings.Add("duskOnNextLoad", true, "Dusk Freed (On Next Load)");
+        settings.Add("fourkingsOnNextLoad", true, "Four Kings (On Next Load)");
+        settings.Add("gapingOnNextLoad", true, "Gaping Dragon (On Next Load)");
+        settings.Add("gargsOnNextLoad", true, "Gargoyles (On Next Load)");
+        settings.Add("golemExitZone", true, "Iron Golem (On Entering Anor Londo)"); 
+        settings.Add("gwynOnNextLoad", true, "Gwyn (On Credits)");
+        settings.Add("gwyndolinOnNextLoad", true, "Gwyndolin (On Next Load)");
+        settings.Add("kalameetOnNextLoad", true, "Kalameet (On Next Load)");
+        settings.Add("manusOnNextLoad", true, "Manus (On Next Load)");
+        settings.Add("butterflyOnNextLoad", true, "Moonlight Butterfly (On Next Load)");
+        settings.Add("nitoOnNextLoad", true, "Nito (On Next Load)");
+        settings.Add("ons", true, "Ornstein & Smough"); 
+            settings.Add("onsOnNextLoad", false, "On Next Load", "ons");
+            settings.Add("darkALOnNextLoad", true, "On Next Load After Turning Anor Londo Dark", "ons");
+        settings.Add("pinwheelExitZone", true, "Pinwheel (On Exiting Boss Area)");
+        settings.Add("priscilla", true, "Priscilla");
+            settings.Add("priscillaExitZone", false, "On Exiting Painted World", "priscilla");
+            settings.Add("priscillaOnNextLoad", true, "On Next Load", "priscilla");
+        settings.Add("quelaag", true, "Quelaag"); 
+            settings.Add("quelaagOnNextLoad", true, "On Next Load", "quelaag");
+            settings.Add("quelaagLastBonfire", false, "On Resting At Demon Ruins Bonfire", "quelaag");
+        settings.Add("sguardian", true, "Sanctuary Guardian"); 
+            settings.Add("sguardianExitZone", true, "On Exiting Boss Area", "sguardian");
+            settings.Add("sguardianLastBonfire", false, "On Resting At Oolacile Sanctuary Bonfire", "sguardian");
+        settings.Add("seathOnNextLoad", true, "Seath (On Next Load)");
+        settings.Add("sifOnNextLoad", true, "Sif (On Next Load)");
+        settings.Add("sgsOnNextLoad", true, "Sen's Gate Skip (On Next Load)");
+        settings.Add("strayOnNextLoad", true, "Stray Demon (On Next Load)");
+        settings.Add("taurusExitZone", true, "Taurus Demon (On Exiting Boss Area)");
+        settings.Add("wrongwarpKiln", true, "Wrong Warp to Kiln (Using PCC)");
 
     settings.CurrentDefaultParent = "info";
-    settings.Add("info1", false, "Autosplitter for Dark Souls PTDE by seanpwolf");
-    settings.Add("info2", false, "Official Steam version is supported, debug/beta versions are not");
-    settings.Add("info3", false, "Website: https://github.com/seanpwolf/AutoSplitters");
+        settings.Add("info1", false, "Auto splitter for Dark Souls PTDE by seanpwolf");
+        settings.Add("info2", false, "Website: https://github.com/seanpwolf/AutoSplitters");
+    // --- End Settings ---
 
     vars.efMasks = new Dictionary<string, Dictionary<uint, string>>() {
-        {"bossMain", new Dictionary<uint, string>() {
+        {"0000", new Dictionary<uint, string>() {
             {0x00008000, "asylum"},
             {0x00200000, "boc"},
             {0x00040000, "fourkings"},
@@ -86,37 +74,37 @@ startup {
             {0x00020000, "seath"},
             {0x04000000, "sif"}
         }},
-        {"bossBurg", new Dictionary<uint, string>() {
+        {"0F70", new Dictionary<uint, string>() {
             {0x02000000, "capra"},
             {0x04000000, "taurus"}
         }},
-        {"dusk"    , new Dictionary<uint, string>() {
-            {0x00000400, "dusk"}, // 0x2000 for golden golem kill
-            {0x00800000, "dusk"}, 
+        {"1E40", new Dictionary<uint, string>() {
+            {0x00000400, "dusk"}, 
+            {0x00800000, "dusk"} 
         }},
-        {"bossMB"  , new Dictionary<uint, string>() {
+        {"1E70", new Dictionary<uint, string>() {
             {0x08000000, "butterfly"},
         }},
-        {"bossDLC" , new Dictionary<uint, string>() {
+        {"2300", new Dictionary<uint, string>() {
             {0x40000000, "artorias"},
             {0x0C000000, "kalameet"},
             {0x20000000, "manus"},
             {0x80000000, "sguardian"}
         }},
-        {"bossDF"  , new Dictionary<uint, string>() {
+        {"3C30", new Dictionary<uint, string>() {
             {0x00004020, "firesage"}
         }},
-        {"bossCD"  , new Dictionary<uint, string>() {
+        {"3C70", new Dictionary<uint, string>() {
             {0x08000000, "ceaseless"},
             {0x04000000, "centipede"}
         }},
-        {"darkAL"  , new Dictionary<uint, string>() {
+        {"4630", new Dictionary<uint, string>() {
             {0x00008000, "darkAL"}
         }},
-        {"bossG"   , new Dictionary<uint, string>() {
+        {"4670", new Dictionary<uint, string>() {
             {0x08000000, "gwyndolin"}
         }},
-        {"bossSD"  , new Dictionary<uint, string>() {
+        {"5A70", new Dictionary<uint, string>() {
             {0x08000000, "stray"}
         }}
     };
@@ -137,230 +125,326 @@ startup {
     vars.splitFlagBonfires = new Dictionary<string, int>() {
         {"asylumLastBonfire",    1022960}, 
         {"artoriasLastBonfire",  1212962},
-        //{"quelaagLastBonfire",   1402960}, // DoC
-        {"quelaagLastBonfire",   1412961}, // Demon Ruins
+        {"quelaagLastBonfire",   1412961}, 
         {"sguardianLastBonfire", 1212961}
     };
 
+    vars.aobsPTDE = new Dictionary<string, SigScanTarget>() {
+        {"charData",   new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 40 34 53 32")},
+        {"charLoaded", new SigScanTarget(1, "A1 ?? ?? ?? ?? 8B 48 04 8B 40 08 53")},
+        {"deathcam",   new SigScanTarget(1, "A1 ?? ?? ?? ?? 39 48 3C 0F 94")},
+        {"eventFlag",  new SigScanTarget(1, "A1 ?? ?? ?? ?? 53 55 56 8B F1 33 ED")},
+        {"worldState", new SigScanTarget(4, "83 EC 0C A1 ?? ?? ?? ?? 80 B8")},
+        {"worldZone",  new SigScanTarget(1, "A1 ?? ?? ?? ?? 53 55 56 8B B0")}
+    };
+
+    vars.pointers = new Dictionary<string, IntPtr>() {
+        {"charData",   IntPtr.Zero},
+        {"charLoaded", IntPtr.Zero},
+        {"deathcam",   IntPtr.Zero},
+        {"eventFlag",  IntPtr.Zero},
+        {"worldState", IntPtr.Zero},
+        {"worldZone",  IntPtr.Zero},
+        {"igt",        IntPtr.Zero},
+        {"wazone",     IntPtr.Zero},
+        {"ngplus",     IntPtr.Zero},
+        {"bonfire",    IntPtr.Zero},
+        {"xPos",       IntPtr.Zero},
+        {"yPos",       IntPtr.Zero},
+        {"zPos",       IntPtr.Zero},
+        {"charNo",     IntPtr.Zero},
+        {"charClass",  IntPtr.Zero},
+        {"charGift",   IntPtr.Zero},
+        {"charDex",    IntPtr.Zero},
+        {"charSL",     IntPtr.Zero}
+    };
+
+    var DSMemoryWatcher = new Dictionary<string, dynamic>() {
+        {"Current", null},
+        {"Old",     null},
+        {"Changed", false}
+    };
+
+    vars.area      = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.mpzone    = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.world     = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.ngplus    = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.bonfire   = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.xPos      = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.yPos      = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.zPos      = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charNo    = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charClass = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charGift  = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charDex   = new Dictionary<string, dynamic>(DSMemoryWatcher);
+    vars.charSL    = new Dictionary<string, dynamic>(DSMemoryWatcher);
+
     vars.igt = 0;
+    vars.failedScans = 0;
     vars.isLoaded = false;
-    vars.justStarted = true;
-    vars.newNGPlus = false;
+    vars.newClear = false;
     vars.removedQuitoutDelay = true;
-    vars.shouldStart = false;
     vars.completedSplits = new HashSet<string>();
     vars.queuedSplits = new HashSet<string>();
-    refreshRate = 30;
+
+    vars.AOBScan = (Func<Process,SignatureScanner,string,bool>)((proc, scanner, ptrName) => {
+        vars.pointers[ptrName] = scanner.Scan(vars.aobsPTDE[ptrName]);
+        if (vars.pointers[ptrName] != IntPtr.Zero)
+            vars.pointers[ptrName] = proc.ReadPointer((IntPtr)vars.pointers[ptrName]);
+        return (vars.pointers[ptrName] == IntPtr.Zero);
+    });
+
+    vars.DerefOffsets = (Func<Process, IntPtr, int[], IntPtr>)((proc, basePtr, offsets) => {
+        IntPtr ptr = basePtr;
+        for (int i = 0; i < offsets.Length - 1; i++)
+            ptr = proc.ReadPointer((IntPtr) (ptr.ToInt32() + offsets[i]));
+        return (ptr = (IntPtr) (ptr.ToInt32() + offsets[offsets.Length - 1]));
+    });
+
+    vars.StablePosEquals = (Func<float, float, float, float, bool>)((x, y, z, prec) => {
+        bool isEqual = true;
+        isEqual = isEqual && (Math.Abs(vars.xPos["Current"] - x) <= prec);
+        isEqual = isEqual && (Math.Abs(vars.yPos["Current"] - y) <= prec);
+        isEqual = isEqual && (Math.Abs(vars.zPos["Current"] - z) <= prec);
+        return isEqual;
+    });
+
+    vars.UpdateDictWatcher = (Func<Dictionary<string, dynamic>, dynamic, bool>)((dsmw, val) => {
+        dsmw["Old"] = (dsmw["Current"] != null) ? dsmw["Current"] : val;
+        dsmw["Current"] = val;
+        return (dsmw["Changed"] = !(dsmw["Current"].Equals(dsmw["Old"])));
+    });
+
+    vars.WAZoneEquals = (Func<byte, byte, int, bool>)((w, a, z) => {
+        bool isEqual = !(w == null && a == null && z == null);
+        isEqual = isEqual && ((w != null) ? vars.world["Current"]  == w : true);
+        isEqual = isEqual && ((a != null) ? vars.area["Current"]   == a : true);
+        isEqual = isEqual && ((z != null) ? vars.mpzone["Current"] == z : true);
+        return isEqual;
+    });
 }
 
 init {
-    if (modules.First().ModuleMemorySize != 0x11C2000) {
-        version = (modules.First().ModuleMemorySize == 0x11C6000) ? "Debug" : "<unknown>";
-        return;
+    if (vars.failedScans > 9) {
+        print("[DS.ASL] Failed to sigscan 10 times; assuming version is invalid.");
+        return version = "Invalid";
     }
-    version = "Steam";
 
-    vars.soulLevel = new MemoryWatcher<int>(new DeepPointer("DARKSOULS.exe", 0xF78700, 0x8, 0x88));
-    vars.charName = new StringWatcher(new DeepPointer("DARKSOULS.exe", 0xF78700, 0x8, 0xA0), 16);
+    IntPtr ptr      = IntPtr.Zero;
+    IntPtr baseAddr = modules.First().BaseAddress;
+    int memsize     = modules.First().ModuleMemorySize - baseAddr.ToInt32();
+    if (memsize < 0) {
+        vars.failedScans = 10;
+        print("[DS.ASL] Module memory size is less than zero; assuming version is invalid");
+        return version = "Invalid";
+    }
 
-    vars.area = new MemoryWatcher<byte>(new DeepPointer("DARKSOULS.exe", 0xF7E204, 0xA12));
-    vars.bonfire = new MemoryWatcher<int>(new DeepPointer("DARKSOULS.exe", 0xF784A0, 0xB04));
-    vars.deathcam = new MemoryWatcher<byte>(new DeepPointer("DARKSOULS.exe", 0xF7D644, 0x40));
-    vars.mpzone = new MemoryWatcher<int>(new DeepPointer("DARKSOULS.exe", 0xF7E204, 0xA14));
-    vars.ngplus = new MemoryWatcher<int>(new DeepPointer("DARKSOULS.exe", 0xF78700, 0x3C));
-    vars.world  = new MemoryWatcher<byte>(new DeepPointer("DARKSOULS.exe", 0xF7E204, 0xA13));
-    vars.xPos = new MemoryWatcher<float>(new DeepPointer("DARKSOULS.exe", 0xF7DC70, 4, 0, 0x28, 0x1C, 0x10));
-    vars.yPos = new MemoryWatcher<float>(new DeepPointer("DARKSOULS.exe", 0xF7DC70, 4, 0, 0x28, 0x1C, 0x14));
-    vars.zPos = new MemoryWatcher<float>(new DeepPointer("DARKSOULS.exe", 0xF7DC70, 4, 0, 0x28, 0x1C, 0x18));
+    // AOB scans for base pointers 
+    var scanner     = new SignatureScanner(game, baseAddr, memsize);
+    foreach (string key in vars.aobsPTDE.Keys) {
+        if (vars.AOBScan(game, scanner, key))
+            throw new Exception("[DS.ASL] Failed to find memory address ("+(++vars.failedScans)+").");
+        if (key.Equals("charLoaded") || key.Equals("deathcam"))
+            continue;
 
-    vars.watchers = new MemoryWatcherList() {
-        vars.area,
-        vars.bonfire,
-        vars.deathcam,
-        vars.mpzone,
-        vars.ngplus,
-        vars.world,
-        vars.xPos,
-        vars.yPos,
-        vars.zPos
-    };
+        ptr = game.ReadPointer((IntPtr) vars.pointers[key]);
+        if (ptr == IntPtr.Zero)
+            throw new Exception("[DS.ASL] Game not fully loaded yet ("+(++vars.failedScans)+").");
+        vars.pointers[key] = ptr;
+    }
 
+    ptr = vars.DerefOffsets(game, vars.pointers["charData"], new int[] {8, 0});
+    vars.pointers["igt"]       = (IntPtr) (vars.pointers["charData"].ToInt32() + 0x68);
+    vars.pointers["ngplus"]    = (IntPtr) (vars.pointers["charData"].ToInt32() + 0x3C);
+    vars.pointers["wazone"]    = (IntPtr) (vars.pointers["worldZone"].ToInt32() + 0xA10);
+    vars.pointers["bonfire"]   = (IntPtr) (vars.pointers["worldState"].ToInt32() + 0xB04);
+    vars.pointers["xPos"]      = (IntPtr) (vars.pointers["worldState"].ToInt32() + 0xB70);
+    vars.pointers["yPos"]      = (IntPtr) (vars.pointers["worldState"].ToInt32() + 0xB74);
+    vars.pointers["zPos"]      = (IntPtr) (vars.pointers["worldState"].ToInt32() + 0xB78);
+    vars.pointers["charNo"]    = (IntPtr) (ptr.ToInt32() + 8);
+    vars.pointers["charClass"] = (IntPtr) (ptr.ToInt32() + 0xC6);
+    vars.pointers["charGift"]  = (IntPtr) (ptr.ToInt32() + 0xC8);
+    vars.pointers["charDex"]   = (IntPtr) (ptr.ToInt32() + 0x58);
+    vars.pointers["charSL"]    = (IntPtr) (ptr.ToInt32() + 0x88);
+
+    ptr = vars.DerefOffsets(game, vars.pointers["eventFlag"], new int[] {0, 0});
     vars.eventFlags = new MemoryWatcherList() {
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x0000)) { Name = "bossMain" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x0F70)) { Name = "bossBurg" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x1E40)) { Name = "dusk" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x1E70)) { Name = "bossMB" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x2300)) { Name = "bossDLC" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x3C30)) { Name = "bossDF" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x3C70)) { Name = "bossCD" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x4630)) { Name = "darkAL" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x4670)) { Name = "bossG" },
-        new MemoryWatcher<uint>(new DeepPointer("DARKSOULS.exe", 0xF7D7D4, 0, 0x5A70)) { Name = "bossSD" }
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x0000)) { Name = "0000", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x0F70)) { Name = "0F70", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x1E40)) { Name = "1E40", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x1E70)) { Name = "1E70", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x2300)) { Name = "2300", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x3C30)) { Name = "3C30", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x3C70)) { Name = "3C70", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x4630)) { Name = "4630", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x4670)) { Name = "4670", Current = 0xFFFFFFFF },
+        new MemoryWatcher<uint>((IntPtr)(ptr.ToInt32() + 0x5A70)) { Name = "5A70", Current = 0xFFFFFFFF }
     };
-    foreach (var ef in vars.eventFlags)
-        ef.Current = 0xFFFFFFFF;
+
+    // Check against known versions (for informational/debugging purposes)
+    if (modules.First().ModuleMemorySize == 0x11C2000)
+        version = "Current (PTDE/Steam)";
+    else if (modules.First().ModuleMemorySize == 0x11C6000)
+        version = "Debug (PTDE/Steam)";
+    else if (modules.First().ModuleMemorySize == 0x11BF000)
+        version = "Beta (PTDE/Steam)";
+    else
+        version = "Unknown (PTDE/" + ((game.ProcessName.Equals("DATA")) ? "GFWL)" : "Steam)");
+    refreshRate = 30;
+}
+
+exit {
+    foreach (string key in new List<string>(vars.pointers.Keys))
+        vars.pointers[key] = IntPtr.Zero; 
+    vars.failedScans = 0;
+    refreshRate = 0.5;
 }
 
 update {
-    if (version.Contains("unknown")) return false;
-    if (version.Equals("Debug")) return;
-    Func<float,float,float,bool> floatEquals = (x,y,p) => (Math.Abs(x-y) <= p);
+    if (version.Contains("Invalid")) return false;
 
-    vars.isLoaded = current.charPtr != 0; 
+    current.igt      = game.ReadValue<int>((IntPtr)vars.pointers["igt"]);
+    var wazone       = game.ReadValue<long>((IntPtr)vars.pointers["wazone"]);
+    var charLoaded   = game.ReadPointer((IntPtr)vars.DerefOffsets(game, vars.pointers["charLoaded"], new int[] {0, 4, 0}));
+    current.deathcam = game.ReadValue<byte>((IntPtr)vars.DerefOffsets(game, vars.pointers["deathcam"], new int[] {0, 0x40}));
+    vars.isLoaded    = charLoaded != IntPtr.Zero;
 
-    vars.charName.Update(game);
-    vars.soulLevel.Update(game);
-    if (vars.isLoaded && current.mpzone != -1) {
+    if (vars.isLoaded && (wazone >> 32) != -1) {
         vars.eventFlags.UpdateAll(game);
-        vars.watchers.UpdateAll(game);
+        vars.UpdateDictWatcher(vars.ngplus,  game.ReadValue<int>((IntPtr)vars.pointers["ngplus"]));
+        vars.UpdateDictWatcher(vars.bonfire, game.ReadValue<int>((IntPtr)vars.pointers["bonfire"]));
+        vars.UpdateDictWatcher(vars.xPos,    game.ReadValue<float>((IntPtr)vars.pointers["xPos"]));
+        vars.UpdateDictWatcher(vars.yPos,    game.ReadValue<float>((IntPtr)vars.pointers["yPos"]));
+        vars.UpdateDictWatcher(vars.zPos,    game.ReadValue<float>((IntPtr)vars.pointers["zPos"]));
+        vars.UpdateDictWatcher(vars.area,   (byte) (wazone >> 16 & 0xFF));
+        vars.UpdateDictWatcher(vars.world,  (byte) (wazone >> 24 & 0xFF));
+        vars.UpdateDictWatcher(vars.mpzone, (int)  (wazone >> 32));
+    } else if (current.igt == 0) { // main menu
+        vars.UpdateDictWatcher(vars.charNo,    game.ReadValue<int>((IntPtr)vars.pointers["charNo"]));
+        vars.UpdateDictWatcher(vars.charClass, game.ReadValue<byte>((IntPtr)vars.pointers["charClass"]));
+        vars.UpdateDictWatcher(vars.charGift,  game.ReadValue<byte>((IntPtr)vars.pointers["charGift"]));
+        vars.UpdateDictWatcher(vars.charDex,   game.ReadValue<int>((IntPtr)vars.pointers["charDex"]));
+        vars.UpdateDictWatcher(vars.charSL,    game.ReadValue<int>((IntPtr)vars.pointers["charSL"]));
     }
-
-    if (vars.ngplus.Changed) {
-        vars.newNGPlus = true;
-        print(String.Format("[DS.ASL] ngplus: {0} -> {1} ({2})", vars.ngplus.Old, vars.ngplus.Current, vars.ngplus.Changed));
-    }
-
-    if (vars.newNGPlus && vars.world.Current == 18 && vars.area.Current == 1) {
-        vars.newNGPlus = false;
-        vars.completedSplits.Clear();
-        vars.queuedSplits.Clear();
-        print("[DS.ASL] update: new NG+ reached, clearing split hashsets");
-    }
-
-    vars.shouldStart = (vars.world.Current == 18 && 
-                        vars.area.Current == 1 && 
-                        vars.mpzone.Current == -2 &&
-                        floatEquals(vars.xPos.Current, -15.45f, 0.001f) && 
-                        floatEquals(vars.yPos.Current, 184.70f, 0.001f) && 
-                        floatEquals(vars.zPos.Current, -46.80f, 0.001f));
 }
 
 start {
-    if (!version.Equals("Steam")) return false;
-
-    if (!(vars.igt == 0 && vars.completedSplits.Count == 0)) {
+    if (vars.igt > 0) {
         vars.igt = 0;
-        vars.justStarted = true;
-        vars.newNGPlus = false;
+        vars.newClear = false;
         vars.removedQuitoutDelay = true;
         vars.completedSplits.Clear();
         vars.queuedSplits.Clear();
-        print("[DS.ASL] start: reinitialized helpers");
     }
 
-    if (vars.shouldStart)
-        print("[DS.ASL] start: starting timer...");
-    return vars.shouldStart && settings["startConds"];
+    bool shouldStart = vars.WAZoneEquals(18, 1, -2);
+    shouldStart = shouldStart && vars.StablePosEquals(-15.45f, 184.70f, -46.80f, 0.001f);
+    if (shouldStart)
+        print("[DS.ASL] starting timer... (in asylum starting spawn)");
+    return shouldStart;
 }
 
 reset {
-    if (!version.Equals("Steam")) return false;
-
-    // Reset when entering the character creation screen - this [appears]
-    // to be the only time that the soul level is non zero with an "" charName
-    bool shouldReset = (current.igt == 0 &&
-                        vars.soulLevel.Changed &&
-                        vars.soulLevel.Old == 0 &&
-                        vars.charName.Current.Equals(""));
-
-    if (shouldReset) {
-        print("[DS.ASL] reset: resetNewChar");
-        print(String.Format("[DS.ASL] {0}, {1} -> {2}, `{3}'", current.igt, vars.soulLevel.Old, vars.soulLevel.Current, vars.charName.Current));
-        return settings["resetNewChar"];
+    if (vars.ngplus["Changed"])
+        vars.newClear = true;
+    if (vars.newClear && vars.WAZoneEquals(18, 1, null)) { 
+        vars.newClear = false;
+        vars.completedSplits.Clear();
+        vars.queuedSplits.Clear();
+        print("[DS.ASL] new playthrough reached (additional NG+), clearing split hashsets");
     }
 
-    // Reset if the current position is the initial spawn in asylum upon
-    // creating a new character and if the current IGT is 2 seconds or less
-    shouldReset = vars.shouldStart && vars.igt <= 2000;
-
-    // "delay" auto resets until moved from the spawn point; prevents chain
-    // of auto start -> auto reset etc. since they share similar conditionals
-    if (vars.justStarted) 
-        vars.justStarted = shouldReset;
-    else if (shouldReset) {
-        print("[DS.ASL] reset: resetNewRun");
-        return settings["resetNewRun"];
-    }
+    bool shouldReset = current.igt == 0;
+    shouldReset = shouldReset && vars.charNo["Current"]    == -1;
+    shouldReset = shouldReset && vars.charDex["Current"]   == 13;
+    shouldReset = shouldReset && vars.charSL["Current"]    == 4;
+    shouldReset = shouldReset && vars.charClass["Current"] == 0;
+    shouldReset = shouldReset && vars.charGift["Current"]  == 0;
+    if (shouldReset)
+        print("[DS.ASL] in char creation, assuming new run (resetting)");
+    return shouldReset;
 }
 
 split {
-    if (!version.Equals("Steam")) return false;
-
-    bool shouldSplit = false;
     vars.queuedSplits.ExceptWith(vars.completedSplits);
+    bool shouldSplit = false;
+    var queueSplitTypes = new string[] {
+        "OnNextLoad",
+        "ExitZone",
+        "LastBonfire"
+    };
 
     if (vars.isLoaded) {
         // Queue up splits if their respective event flags are newly set
         foreach (var ef in vars.eventFlags) {
-            uint mask = (ef.Current > ef.Old) ? ef.Current ^ ef.Old : (uint)0;
-            bool splitEnabled = false;
-            string splitFlag = "";
-            string[] splitTypes = "OnNextLoad ExitZone LastBonfire".Split(' ');
+            if (ef.Current <= ef.Old) continue; 
 
-            if (ef.Current > ef.Old)
-                print(String.Format("[DS.ASL] split: {0:X8} -> {1:X8} ({2})", ef.Old, ef.Current, ef.Name));
+            string eventFlagName = "";
+            if (vars.efMasks[ef.Name].TryGetValue(ef.Current ^ ef.Old, out eventFlagName)) {
+                foreach (string splitType in queueSplitTypes) {
+                    string splitFlag = eventFlagName + splitType;
 
-            if (vars.efMasks[ef.Name].TryGetValue(mask, out splitFlag)) {
-                foreach (string s in splitTypes) {
-                    splitEnabled = settings.ContainsKey(splitFlag+s);
-                    splitEnabled = splitEnabled && settings[splitFlag+s];
-
-                    if (!splitEnabled)
-                        vars.completedSplits.Add(splitFlag+s);
-
-                    if (!vars.completedSplits.Contains(splitFlag+s)) {
-                        vars.queuedSplits.Add(splitFlag+s);
-                        print(String.Format("[DS.ASL] split: added {0} to queue", splitFlag+s));
+                    // Do nothing if the split type isn't enabled by the user
+                    if (!(settings.ContainsKey(splitFlag) && settings[splitFlag]))
+                        vars.completedSplits.Add(splitFlag);
+                    else if (!vars.completedSplits.Contains(splitFlag)) {
+                        vars.queuedSplits.Add(splitFlag);
+                        print("[DS.ASL] split: added "+splitFlag+" to queue");
                     }
                 }
             }
         }
 
-        // SGS
-        if (vars.mpzone.Changed && vars.mpzone.Current == 0x249F0 &&
-                vars.world.Current == 10 && vars.area.Current == 1 && 
-                vars.deathcam.Current == 1) {
+        // Sen's Gate Skip
+        if (vars.mpzone["Changed"] && current.deathcam == 1 && vars.WAZoneEquals(10, 1, 0x249F0)) {
             if (!settings["sgsOnNextLoad"])
                 vars.completedSplits.Add("sgsOnNextLoad");
-
-            if (!vars.completedSplits.Contains("sgsOnNextLoad")) {
+            else if (!vars.completedSplits.Contains("sgsOnNextLoad")) {
                 vars.queuedSplits.Add("sgsOnNextLoad");
                 print("[DS.ASL] split: added sgsOnNextLoad to queue");
             }
         }
 
-        // PCC WW to Kiln
-        if (vars.world.Old == 12 && vars.world.Current == 18 && 
-                vars.area.Changed && vars.mpzone.Changed && 
-                vars.mpzone.Current == 0x2BF20) {
-            vars.completedSplits.Add("kilnwwOnFlagSet");
-            if (settings["kilnwwOnFlagSet"]) {
-                print("[DS.ASL] split: kilnwwOnFlagSet");
-                return settings["kilnwwOnFlagSet"];
+        // Wrong Warp to Kiln (using PCC)
+        if (vars.mpzone["Changed"] && vars.world["Old"] == 12 && vars.WAZoneEquals(18, 0, 0x2BF20)) {
+            if (!vars.completedSplits.Contains("wrongwarpKiln")) {
+                vars.completedSplits.Add("wrongwarpKiln");
+                if (settings["wrongwarpKiln"]) {
+                    print("[DS.ASL] split: wrongwarpKiln");
+                    return settings["wrongwarpKiln"];
+                }
             }
         }
 
         // Check and split queued splits if their conditions are met
         foreach (string splitFlag in vars.queuedSplits) {
             if (splitFlag.Contains("ExitZone")) 
-                shouldSplit = (vars.mpzone.Changed && 
-                               vars.mpzone.Old == vars.splitFlagZones[splitFlag]);
+                shouldSplit = (vars.mpzone["Changed"] && 
+                               vars.mpzone["Old"] == vars.splitFlagZones[splitFlag]);
             else if (splitFlag.Contains("LastBonfire")) 
-                shouldSplit = (vars.bonfire.Changed &&
-                               vars.bonfire.Current == vars.splitFlagBonfires[splitFlag]);
+                shouldSplit = (vars.bonfire["Changed"] &&
+                               vars.bonfire["Current"] == vars.splitFlagBonfires[splitFlag]);
 
-            if (shouldSplit)
+            if (shouldSplit) {
+                vars.completedSplits.Add(splitFlag); 
                 print(String.Format("[DS.ASL] split: {0}", splitFlag));
-            return shouldSplit && vars.completedSplits.Add(splitFlag); 
+                break;
+            }
         }
-    } else if (current.igt != 0) { // split on loads only, not main menu
+    } else if (current.igt > 0) { // exclude main menu "loads"
         foreach (string splitFlag in vars.queuedSplits) {
-            if (splitFlag.Contains("OnNextLoad")) {
+            // If the splitFlag is for gwyn, make sure we're also on the credits screen
+            shouldSplit = splitFlag.Contains("OnNextLoad");
+            shouldSplit = shouldSplit && (splitFlag.Contains("gwyn") ? vars.newClear : true);
+
+            if (shouldSplit) {
+                vars.completedSplits.Add(splitFlag); 
                 print(String.Format("[DS.ASL] split: {0}", splitFlag));
-                return vars.completedSplits.Add(splitFlag); 
+                break;
             }
         }
     }
+    return shouldSplit;
 }
 
 isLoading { return true; } // disables gameTime approximation
