@@ -5,7 +5,9 @@ startup {
     refreshRate = 0.5;
 
     // --- Start Settings ---
-    settings.Add("splitConds", false, "Auto Split Conditions");
+    settings.Add("invReset", true, "Restore Default Equipment Indices On New Run");
+    settings.SetToolTip("invReset", "Courtesy of CapitaineToinon (https://github.com/CapitaineToinon/LiveSplit.DarkSoulsIGT)");
+    settings.Add("splitConds", true, "Auto Split Conditions");
     settings.Add("info", true, "=== Info ===");
     
     settings.CurrentDefaultParent = "splitConds";
@@ -135,7 +137,8 @@ startup {
         {"deathcam",   new SigScanTarget(1, "A1 ?? ?? ?? ?? 39 48 3C 0F 94")},
         {"eventFlag",  new SigScanTarget(1, "A1 ?? ?? ?? ?? 53 55 56 8B F1 33 ED")},
         {"worldState", new SigScanTarget(4, "83 EC 0C A1 ?? ?? ?? ?? 80 B8")},
-        {"worldZone",  new SigScanTarget(1, "A1 ?? ?? ?? ?? 53 55 56 8B B0")}
+        {"worldZone",  new SigScanTarget(1, "A1 ?? ?? ?? ?? 53 55 56 8B B0")},
+        {"invIndex",   new SigScanTarget(36, "8B 4C 24 34 8B 44 24 2C 89 8A 38 01 00 00 8B 90 08 01 00 00 C1 E2 10 0B 90 00 01 00 00 8B C1 8B CD 89 14 AD ?? ?? ?? ??")}
     };
 
     vars.pointers = new Dictionary<string, IntPtr>() {
@@ -145,6 +148,7 @@ startup {
         {"eventFlag",  IntPtr.Zero},
         {"worldState", IntPtr.Zero},
         {"worldZone",  IntPtr.Zero},
+        {"invIndex",   IntPtr.Zero},
         {"igt",        IntPtr.Zero},
         {"wazone",     IntPtr.Zero},
         {"ngplus",     IntPtr.Zero},
@@ -186,6 +190,9 @@ startup {
     vars.removedQuitoutDelay = true;
     vars.completedSplits = new HashSet<string>();
     vars.queuedSplits = new HashSet<string>();
+    vars.defaultInventoryIndices = new byte[80];
+    for (int i = 0; i < vars.defaultInventoryIndices.Length; i++)
+        vars.defaultInventoryIndices[i] = 0xFF;
 
     vars.AOBScan = (Func<Process,SignatureScanner,string,bool>)((proc, scanner, ptrName) => {
         vars.pointers[ptrName] = scanner.Scan(vars.aobsPTDE[ptrName]);
@@ -244,7 +251,7 @@ init {
     foreach (string key in vars.aobsPTDE.Keys) {
         if (vars.AOBScan(game, scanner, key))
             throw new Exception("[DS.ASL] Failed to find memory address ("+(++vars.failedScans)+").");
-        if (key.Equals("charLoaded") || key.Equals("deathcam"))
+        if (key.Equals("charLoaded") || key.Equals("deathcam") || key.Equals("invIndex"))
             continue;
 
         ptr = game.ReadPointer((IntPtr) vars.pointers[key]);
@@ -339,8 +346,13 @@ start {
 
     bool shouldStart = vars.WAZoneEquals(18, 1, -2);
     shouldStart = shouldStart && vars.StablePosEquals(-15.45f, 184.70f, -46.80f, 0.001f);
-    if (shouldStart)
+    if (shouldStart) {
+        if (settings["invReset"]) {
+            game.WriteBytes((IntPtr) vars.pointers["invIndex"], (byte[]) vars.defaultInventoryIndices);
+            print("[DS.ASL] restored default equipment indices");
+        }
         print("[DS.ASL] starting timer... (in asylum starting spawn)");
+    }
     return shouldStart;
 }
 
