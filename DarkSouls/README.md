@@ -16,14 +16,14 @@ Note: these auto split conditions can be individually turned on or off if desire
 
 ## Install & Usage
 
-Manually add the auto splitter by [downloading the script](/DarkSoulsASL/DarkSouls.asl?raw=true) and adding a "Scriptable Auto Splitter" to your LiveSplit layout. In detail:
+Manually add the auto splitter by [downloading the script](/DarkSouls/LiveSplit.DarkSouls.asl?raw=true) and adding a "Scriptable Auto Splitter" to your LiveSplit layout. In detail:
 
 1. Open LiveSplit, right click on it, select "Edit Layout..."
-1. In the Layout Editor, click the ![](/DarkSoulsASL/resources/layout_editor_plus.png?raw=true "plus button"), select "Control --> Scriptable Auto Splitter"
+1. In the Layout Editor, click the ![](/resources/layout_editor_plus.png?raw=true "plus button"), select "Control --> Scriptable Auto Splitter"
 1. Select "Layout Settings", click on the "Scriptable Auto Splitter" tab
 1. Browse and select the "DarkSouls.asl" file downloaded earlier
 
-![](/DarkSoulsASL/resources/layout_editor.png?raw=true "Adding Scriptable Auto Splitter Component") ![](/DarkSoulsASL/resources/layout_settings.png?raw=true "ASL Script Settings") 
+![](/resources/layout_editor.png?raw=true "Adding Scriptable Auto Splitter Component") ![](/resources/darksouls_layout_settings.png?raw=true "ASL Script Settings") 
 
 If the DarkSouls game process is detected while setting this up, LiveSplit should display the game version detected underneath the "browse..." button, as shown in the example screenshots (so you can verify the script is working). From here, you can configure the settings of the auto splitter to your liking - note that the settings will be saved in your layout file.
 
