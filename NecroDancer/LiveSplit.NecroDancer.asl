@@ -174,7 +174,7 @@ split {
     }
 }
 
-isLoading { return false; } // Leave gameTime approximation on
+isLoading { return current.loading == 0; } // Leave gameTime approximation on if not loading
 
 gameTime {
     // Only sync the IGT with LiveSplit when the game is loading or the IGT updates in memory
