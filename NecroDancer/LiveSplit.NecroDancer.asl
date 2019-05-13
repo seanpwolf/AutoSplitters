@@ -91,7 +91,7 @@ init {
         version = "Invalid/Unknown";
     
     vars.isAmplified = version.Contains("Amplified");
-    refreshRate = (200/3.0)*2;
+    refreshRate = (200/3.0);
 }
 
 exit {
