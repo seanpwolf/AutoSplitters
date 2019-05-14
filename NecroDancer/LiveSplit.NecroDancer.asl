@@ -67,7 +67,8 @@ startup {
     settings.Add("autosplit", true, "Auto Split Conditions");
         settings.Add("endSplit", true, "Split On Run Finish", "autosplit");
             settings.Add("zoneSplits", true, "Split On Zone Change", "endSplit");
-                settings.Add("levelSplits", false, "Split On Level Change", "zoneSplits");
+                settings.Add("storyBossSplit", false, "Split Before Story Bosses", "zoneSplits");
+                    settings.Add("levelSplits", false, "Split On Level Change", "storyBossSplit");
 
     settings.SetToolTip("autoreset", "Settings/conditions for when to auto reset");
         settings.SetToolTip("igtReset", "Resets the timer when the IGT is restarted/reinitialized (usually a quick restart in game)");
@@ -76,7 +77,8 @@ startup {
     settings.SetToolTip("autosplit", "Settings/conditions for when to auto split");
         settings.SetToolTip("endSplit", "Splits on a finished run for an individual character");
             settings.SetToolTip("zoneSplits", "Splits after changing zones/depths (e.g. would split on transition from 2-4 to 3-1)");
-                settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g would split on transition from 1-2 to 1-3)\nThis will also split for Dead Ringer or Frankensteinway if playing as Cadence or Nocturna respectively");
+                settings.SetToolTip("storyBossSplit", "Splits after the last zone/depth level/floor before entering story bosses\n(e.g. would split after 5-3 for cadence allowing for a separate segment for dead ringer and necrodancer)");
+                    settings.SetToolTip("levelSplits", "Splits after changing levels/floors (e.g would split on transition from 1-2 to 1-3)\nThis will also split for Dead Ringer or Frankensteinway if playing as Cadence or Nocturna respectively");
     
     vars.seedChangedReset = false; 
     vars.splits = new HashSet<string>();
@@ -167,10 +169,16 @@ split {
         }
     }
 
-    // Level/Floor Change 
+    // Level/Floor Change (also pre-story boss split)
     if (current.zone == old.zone && current.level > old.level && old.level > 0) {
-        vars.splits.Add(splitFlag);
-        return settings["levelSplits"];
+        if (current.charID <= 2 || current.charID == 10) 
+            shouldSplit = (settings["storyBossSplit"] && current.zone == lastZone && old.level == 3);
+        shouldSplit = shouldSplit || settings["levelSplits"];
+
+        if (shouldSplit) {
+            vars.splits.Add(splitFlag);
+            return shouldSplit;
+        }
     }
 }
 
